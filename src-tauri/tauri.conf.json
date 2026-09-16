@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Jockey Studio",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "identifier": "com.cjaycapillo.jockeystudio",
   "build": {
     "beforeDevCommand": "npm run dev --workspace ui",
@@ -43,6 +43,10 @@
       "nsis": {
         "installerIcon": "icons/icon.ico",
         "installMode": "currentUser"
+      },
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": true
       }
     }
   }
