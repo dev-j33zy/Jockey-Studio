@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Jockey Studio",
+  "version": "0.1.0",
+  "identifier": "com.cjaycapillo.jockeystudio",
+  "build": {
+    "beforeDevCommand": "npm run dev --workspace ui",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build --workspace ui",
+    "frontendDist": "../ui/dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "title": "Jockey Studio",
+        "width": 1500,
+        "height": 900,
+        "minWidth": 960,
+        "minHeight": 600,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "category": "Music",
+    "shortDescription": "Multi-deck audio mixing player",
+    "longDescription": "Jockey Studio — mix multiple audio decks with per-tile playback, native device routing, fades, looping and auto-mix.",
+    "copyright": "Copyright (c) 2026 CJay Capillo",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "currentUser"
+      }
+    }
+  }
+}
