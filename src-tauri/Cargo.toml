@@ -1,6 +1,6 @@
 [package]
 name = "jockey-studio"
-version = "0.1.0"
+version = "0.1.1"
 description = "Jockey Studio — multi-deck audio mixer with native device routing"
 authors = ["CJay Capillo"]
 edition = "2021"

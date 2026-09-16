@@ -25,9 +25,26 @@ struct Release {
     assets: Vec<ReleaseAsset>,
 }
 
+#[cfg(windows)]
+fn asset_suffix() -> &'static str {
+    ".exe"
+}
+
+#[cfg(target_os = "macos")]
+fn asset_suffix() -> &'static str {
+    ".dmg"
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+fn asset_suffix() -> &'static str {
+    // No self-update package is produced for this platform.
+    "\u{0}"
+}
+
 /// `check_for_updates` command — silently compare the latest GitHub release
 /// against the running build. Returns `None` when the build is current, when
-/// the repo is unset, or when the release has no NSIS installer asset.
+/// the repo is unset, or when the release has no installer asset for the
+/// current OS.
 #[tauri::command]
 pub async fn check_for_updates() -> Result<Option<UpdateInfo>, String> {
     tauri::async_runtime::spawn_blocking(latest_release)
@@ -59,7 +76,7 @@ fn latest_release() -> Result<Option<UpdateInfo>, String> {
     let asset = rel
         .assets
         .iter()
-        .find(|a| a.name.to_lowercase().ends_with(".exe"))
+        .find(|a| a.name.to_lowercase().ends_with(asset_suffix()))
         .ok_or_else(|| "no installer asset found".to_string())?;
 
     let latest = rel.tag_name.trim_start_matches('v').to_string();
@@ -139,7 +156,76 @@ fn install_release(info: &UpdateInfo) -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(not(windows))]
+/// macOS: download the `.dmg`, mount it, extract the `.app` bundle, swap it
+/// into `/Applications`, and relaunch the updated app.
+#[cfg(target_os = "macos")]
+fn install_release(info: &UpdateInfo) -> Result<(), String> {
+    use std::process::Command;
+
+    let dir = std::env::temp_dir().join("jockey-studio-update");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let dmg = dir.join("jockey-studio-update.dmg");
+
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(Duration::from_secs(20))
+        .timeout_read(Duration::from_secs(1200))
+        .build();
+    let resp = agent
+        .get(&info.download_url)
+        .set("User-Agent", UA)
+        .call()
+        .map_err(|e| e.to_string())?;
+    let mut file = std::fs::File::create(&dmg).map_err(|e| e.to_string())?;
+    std::io::copy(&mut resp.into_reader(), &mut file).map_err(|e| e.to_string())?;
+    drop(file);
+
+    let mount = dir.join("mount");
+    std::fs::create_dir_all(&mount).map_err(|e| e.to_string())?;
+    let st = Command::new("hdiutil")
+        .arg("attach")
+        .arg("-quiet")
+        .arg("-nobrowse")
+        .arg("-mountpoint")
+        .arg(&mount)
+        .arg(&dmg)
+        .status()
+        .map_err(|e| e.to_string())?;
+    if !st.success() {
+        return Err("failed to mount the update image".to_string());
+    }
+
+    let app = std::fs::read_dir(&mount)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .find(|p| p.extension().and_then(|x| x.to_str()) == Some("app"))
+        .ok_or_else(|| "update image has no app bundle".to_string())?;
+    let app_name = app
+        .file_name()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| "invalid app bundle name".to_string())?
+        .to_string();
+
+    // Stage the fresh bundle next to /Applications, then swap it in.
+    let staged = dir.join(&app_name);
+    let _ = std::fs::remove_dir_all(&staged);
+    if !Command::new("ditto").arg(&app).arg(&staged).status().map_err(|e| e.to_string())?.success() {
+        let _ = Command::new("hdiutil").arg("detach").arg(&mount).arg("-quiet").status();
+        return Err("failed to extract the update".to_string());
+    }
+    let _ = Command::new("hdiutil").arg("detach").arg(&mount).arg("-quiet").status();
+
+    let target = std::path::PathBuf::from("/Applications").join(&app_name);
+    let _ = std::fs::remove_dir_all(&target);
+    std::fs::rename(&staged, &target).map_err(|e| e.to_string())?;
+
+    if !Command::new("open").arg(&target).status().map_err(|e| e.to_string())?.success() {
+        return Err("update installed, but relaunching failed".to_string());
+    }
+    Ok(())
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
 fn install_release(_info: &UpdateInfo) -> Result<(), String> {
     Ok(())
 }
