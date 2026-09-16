@@ -580,6 +580,16 @@ input[type="range"].vol-v {
   font-size: 13px;
 }
 
+.dev-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: auto;
+  padding-right: 6px;
+}
+
 .dev-mark {
   flex: 0 0 auto;
   display: inline-flex;
@@ -722,6 +732,16 @@ input[type="range"].vol-v {
   accent-color: var(--accent);
   width: 18px;
   height: 18px;
+}
+
+.setting-select {
+  width: 100%;
+  background: var(--panel-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
 }
 
 .drawer-note {

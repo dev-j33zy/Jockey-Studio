@@ -155,6 +155,12 @@ pub struct EngineSettings {
     pub auto_mix_duck: f32,
     pub default_fade_in: f32,
     pub default_fade_out: f32,
+    #[serde(default = "default_device_id")]
+    pub default_device_id: String,
+}
+
+fn default_device_id() -> String {
+    DEFAULT_DEVICE_ID.to_string()
 }
 
 fn default_auto_mix_db() -> f32 {
@@ -189,6 +195,7 @@ impl Default for EngineSettings {
             auto_mix_duck: 0.35,
             default_fade_in: 0.05,
             default_fade_out: 0.2,
+            default_device_id: default_device_id(),
         }
     }
 }
@@ -301,6 +308,8 @@ pub struct PersistedSettings {
     pub auto_mix_duck: f32,
     pub default_fade_in: f32,
     pub default_fade_out: f32,
+    #[serde(default = "default_device_id")]
+    pub default_device_id: String,
 }
 
 impl From<&EngineSettings> for PersistedSettings {
@@ -315,6 +324,7 @@ impl From<&EngineSettings> for PersistedSettings {
             auto_mix_duck: s.auto_mix_duck,
             default_fade_in: s.default_fade_in,
             default_fade_out: s.default_fade_out,
+            default_device_id: s.default_device_id.clone(),
         }
     }
 }
@@ -331,6 +341,7 @@ impl From<&PersistedSettings> for EngineSettings {
             auto_mix_duck: p.auto_mix_duck,
             default_fade_in: p.default_fade_in,
             default_fade_out: p.default_fade_out,
+            default_device_id: p.default_device_id.clone(),
         }
     }
 }

@@ -2,6 +2,10 @@ export type MediaKind = "audio" | "video";
 export type PlaybackStatus = "stopped" | "loading" | "playing" | "paused" | "ended" | "error";
 export type LoopMode = "off" | "one" | "all";
 
+/** Deck outputs that list `id === DEFAULT_DEVICE_ID` follow the app-level
+ *  default output device configured in Settings instead of pinning their own. */
+export const DEFAULT_DEVICE_ID = "default";
+
 export interface MediaItem {
   id: string;
   path: string;
@@ -56,6 +60,7 @@ export interface EngineSettings {
   autoMixDuck: number;
   defaultFadeIn: number;
   defaultFadeOut: number;
+  defaultDeviceId: string;
 }
 
 export interface EngineSnapshot {

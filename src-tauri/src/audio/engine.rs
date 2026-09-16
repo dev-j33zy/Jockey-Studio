@@ -801,7 +801,14 @@ impl AudioEngine {
             .media_path
             .clone()
             .ok_or_else(|| "no media loaded".to_string())?;
-        let device_id = tile.device_id.clone();
+        let pinned_device = tile.device_id != DEFAULT_DEVICE_ID;
+        // `default` means "follow the app-level default output device"; a
+        // concrete device name pins this deck to that device until removed.
+        let device_id = if pinned_device {
+            tile.device_id.clone()
+        } else {
+            self.settings.default_device_id.clone()
+        };
         let is_loop = matches!(tile.loop_mode, LoopMode::One | LoopMode::All);
         let fade_in = tile.fades.fade_in;
         let effective_volume = if tile.muted { 0.0 } else { tile.volume };
@@ -822,16 +829,21 @@ impl AudioEngine {
         let level = self.tiles[idx].level.clone();
         let source = Box::new(LevelSource::new(source, level)) as Box<dyn Source<Item = i16> + Send>;
 
-        let device = if device_id == DEFAULT_DEVICE_ID {
+        let mut effective = device_id;
+        let device = if effective == DEFAULT_DEVICE_ID {
             None
         } else {
-            self.resolve_device(&device_id)
+            self.resolve_device(&effective)
         };
-        if device.is_none() && device_id != DEFAULT_DEVICE_ID {
-            return Err("output device not found".to_string());
+        if device.is_none() && effective != DEFAULT_DEVICE_ID {
+            if pinned_device {
+                return Err("output device not found".to_string());
+            }
+            // The app-level default was unplugged; fall back to the OS default.
+            effective = DEFAULT_DEVICE_ID.to_string();
         }
 
-        let output = if device_id == DEFAULT_DEVICE_ID {
+        let output = if effective == DEFAULT_DEVICE_ID {
             OutputStream::try_default()
         } else {
             OutputStream::try_from_device(device.as_ref().expect("device checked above"))

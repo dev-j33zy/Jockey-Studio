@@ -11,6 +11,7 @@ import type {
   UpdateInfo,
 } from "../types";
 import type { Backend } from "./backend";
+import { DEFAULT_DEVICE_ID } from "../types";
 
 const DEFAULT_SETTINGS: EngineSettings = {
   autoMixEnabled: true,
@@ -22,6 +23,7 @@ const DEFAULT_SETTINGS: EngineSettings = {
   autoMixDuck: 0.35,
   defaultFadeIn: 0.05,
   defaultFadeOut: 0.2,
+  defaultDeviceId: DEFAULT_DEVICE_ID,
 };
 
 const DEFAULT_DEVICES: OutputDevice[] = [

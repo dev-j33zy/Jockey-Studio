@@ -5,7 +5,7 @@ Multi-deck audio mixing player built with **Tauri 2**, **React** and **Rust (rod
 ## Features
 
 - **Multiple persistent decks** — every tile has its own volume, mute, repeat, loop region, output device and fade settings; the full layout is saved between sessions.
-- **Native device routing** — every deck can be sent to a different WASAPI output device, refreshed live.
+- **Native device routing** — a default output device can be set in Settings (System Default or any device); every deck follows it unless you pick a specific output on the deck, and per-deck picks persist until the deck is removed.
 - **Per-deck fades** — adjustable fade-in/out (seconds) applied on the next play.
 - **Auto-mix (vMix group style)** — per-deck on/off. While a deck's signal is above the gate, it ducks every OTHER deck that also has auto-mix engaged; once it stays below the gate for the hold time, the others ramp back up. Decks without auto-mix are never touched. Attack/release/hold timing is configurable (seconds, decimal precision).
 - **Drag & drop reorder** — drag a deck by its header to reorder tiles; dropping files onto a tile loads them.

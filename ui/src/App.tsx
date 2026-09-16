@@ -24,7 +24,11 @@ interface DragState {
 }
 
 /** Drop slot index (0..rects.length) in the remaining-deck layout: the number
- *  of decks that stay before the dragged deck at the pointer's position. */
+ *  of decks that stay before the dragged deck at the pointer's position.
+ *  Rows fully above the pointer always count; within the pointer's row the
+ *  slot snaps before/after the tile whose vertical band contains the pointer,
+ *  using each tile's horizontal center so it never jumps to the row's first
+ *  column. */
 function computeOver(rects: TileRect[], x: number, y: number): number {
   let over = rects.length;
   for (let i = 0; i < rects.length; i++) {
@@ -33,7 +37,7 @@ function computeOver(rects: TileRect[], x: number, y: number): number {
       over = i + 1;
       continue;
     }
-    if (y < r.top + r.height / 2) {
+    if (y < r.top) {
       over = i;
       break;
     }
@@ -59,6 +63,8 @@ export default function App() {
 
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRects = useRef<TileRect[]>([]);
+  const dragRef = useRef<DragState | null>(null);
+  const overRef = useRef(0);
 
   useEffect(() => {
     void init();
@@ -87,32 +93,37 @@ export default function App() {
         const r = el.getBoundingClientRect();
         return { id: el.dataset.tileId ?? "", left: r.left, top: r.top, width: r.width, height: r.height };
       });
+    const over = computeOver(dragRects.current, e.clientX, e.clientY);
+    overRef.current = over;
+    const d: DragState = { id, x: e.clientX, y: e.clientY, over };
+    dragRef.current = d;
     document.body.classList.add("reorder-drag");
-    setDrag({
-      id,
-      x: e.clientX,
-      y: e.clientY,
-      over: computeOver(dragRects.current, e.clientX, e.clientY),
-    });
+    setDrag(d);
   }, []);
 
   // Track the pointer while a deck reorder drag is in progress and commit the
-  // new position on release.
+  // new position on release. Position overrides live in refs so the drop always
+  // sees the latest slot even if React hasn't flushed the last move.
   useEffect(() => {
     if (!drag) return;
     const move = (ev: PointerEvent) => {
-      setDrag((d) =>
-        d
-          ? { ...d, x: ev.clientX, y: ev.clientY, over: computeOver(dragRects.current, ev.clientX, ev.clientY) }
-          : d,
-      );
+      const d = dragRef.current;
+      if (!d) return;
+      const over = computeOver(dragRects.current, ev.clientX, ev.clientY);
+      overRef.current = over;
+      const next = { ...d, x: ev.clientX, y: ev.clientY, over };
+      dragRef.current = next;
+      setDrag(next);
     };
     const finish = (_ev: PointerEvent) => {
-      const id = drag.id;
-      const over = drag.over;
+      const d = dragRef.current;
+      dragRef.current = null;
       setDrag(null);
       document.body.classList.remove("reorder-drag");
-      if (id) void moveTileTo(id, over);
+      if (!d) return;
+      // Dropping back on the deck's own slot cancels the reorder.
+      const from = useStore.getState().snapshot.tiles.findIndex((t) => t.id === d.id);
+      if (from >= 0 && d.over !== from) void moveTileTo(d.id, d.over);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", finish);

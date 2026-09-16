@@ -1,6 +1,7 @@
 import { useStore } from "../state/store";
 import { backend } from "../state/store";
 import type { EngineSettings } from "../types";
+import { DEFAULT_DEVICE_ID } from "../types";
 
 export default function SettingsPanel() {
   const { snapshot, settingsOpen, toggleSettings, updateSettings, checkForUpdates, updateStatus } =
@@ -97,6 +98,31 @@ export default function SettingsPanel() {
 
       <div className="setting">
         <label className="setting-label">
+          <span>Default device output</span>
+          <span className="setting-value">
+            {s.defaultDeviceId === DEFAULT_DEVICE_ID
+              ? "System Default"
+              : (snapshot.devices.find((d) => d.id === s.defaultDeviceId)?.name ?? s.defaultDeviceId)}
+          </span>
+        </label>
+        <select
+          className="setting-select"
+          value={s.defaultDeviceId}
+          onChange={(e) => void set({ defaultDeviceId: e.target.value })}
+        >
+          <option value={DEFAULT_DEVICE_ID}>System Default</option>
+          {snapshot.devices
+            .filter((d) => d.id !== DEFAULT_DEVICE_ID)
+            .map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+        </select>
+      </div>
+
+      <div className="setting">
+        <label className="setting-label">
           <span>Default fade-in (s)</span>
           <span className="setting-value">{s.defaultFadeIn.toFixed(2)}</span>
         </label>
@@ -151,6 +177,11 @@ export default function SettingsPanel() {
         is above the gate, it ducks every OTHER deck that also has auto-mix engaged; once it stays
         below the gate for the hold time, the others ramp back up. Decks without auto-mix are never
         ducked. Per-deck fades apply on that deck's next play.
+      </p>
+      <p className="drawer-note">
+        Every deck follows the default output device above unless you pick a specific output in the
+        deck's device menu. Per-deck picks persist until the deck is removed; new decks follow the
+        default again.
       </p>
     </aside>
   );

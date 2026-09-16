@@ -9,6 +9,7 @@ import type {
   TileState,
   UpdateInfo,
 } from "../types";
+import { DEFAULT_DEVICE_ID } from "../types";
 import type { Backend } from "../lib/backend";
 import { createBackend } from "../lib/util";
 
@@ -71,6 +72,7 @@ const EMPTY_SNAPSHOT: EngineSnapshot = {
     autoMixDuck: 0.35,
     defaultFadeIn: 0.05,
     defaultFadeOut: 0.2,
+    defaultDeviceId: DEFAULT_DEVICE_ID,
   },
 };
 

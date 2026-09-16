@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { TileState } from "../types";
+import { DEFAULT_DEVICE_ID } from "../types";
 import { useStore } from "../state/store";
 import { formatDuration, formatTime } from "../lib/util";
 import { droppedPaths } from "../lib/dropPaths";
@@ -85,10 +86,13 @@ export default function TileCard({ tile, onStartDrag, dimmed }: TileCardProps) {
       }`
     : "";
 
-  const devices =
-    snapshot.devices.length > 0
-      ? snapshot.devices
-      : [{ id: "default", name: "System Default", isDefault: true, isActive: false, channels: 0, sampleRate: 0 }];
+  const concreteDevices = snapshot.devices.filter((d) => d.id !== DEFAULT_DEVICE_ID);
+  const defaultDevId = snapshot.settings.defaultDeviceId || DEFAULT_DEVICE_ID;
+  const defaultDev = snapshot.devices.find((d) => d.id === defaultDevId);
+  const defaultLabel =
+    defaultDevId === DEFAULT_DEVICE_ID
+      ? "System Default"
+      : (defaultDev?.name ?? defaultDevId);
 
   return (
     <article
@@ -262,11 +266,25 @@ export default function TileCard({ tile, onStartDrag, dimmed }: TileCardProps) {
               <div className="ctl-pop dev-pop">
                 <div className="pop-title">Output device</div>
                 <div className="dev-list">
-                  {devices.map((d) => (
+                  <button
+                    className={`dev-item ${tile.deviceId === DEFAULT_DEVICE_ID ? "active" : ""}`}
+                    title="Follow the default output device set in Settings"
+                    onClick={() => {
+                      void setTileDevice(tile.id, DEFAULT_DEVICE_ID);
+                      closePopups();
+                    }}
+                  >
+                    <span className="dev-name">Default device</span>
+                    <span className="dev-sub">{defaultLabel}</span>
+                    <span className="dev-mark">
+                      {tile.deviceId === DEFAULT_DEVICE_ID ? <IconCheck size={14} /> : null}
+                    </span>
+                  </button>
+                  {concreteDevices.map((d) => (
                     <button
                       key={d.id}
                       className={`dev-item ${tile.deviceId === d.id ? "active" : ""}`}
-                      title={d.isDefault ? "System default output" : d.name}
+                      title={d.name}
                       onClick={() => {
                         void setTileDevice(tile.id, d.id);
                         closePopups();
