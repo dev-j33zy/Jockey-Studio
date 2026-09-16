@@ -2,7 +2,7 @@ import { useStore } from "../state/store";
 import { formatDuration } from "../lib/util";
 
 export default function MediaLibrary() {
-  const { snapshot, libraryOpen, toggleLibrary, loadInto, selectedTileId } = useStore();
+  const { snapshot, libraryOpen, toggleLibrary, loadInto } = useStore();
 
   if (!libraryOpen) return null;
 
@@ -15,8 +15,8 @@ export default function MediaLibrary() {
         </button>
       </div>
       <p className="drawer-hint">
-        Click “Load” to place audio into
-        {selectedTileId ? " the selected deck" : " the next open deck"}.
+        Click “Load” to place audio into the next empty deck (a new deck is added automatically when
+        needed).
       </p>
       <div className="media-list">
         {snapshot.media.length === 0 ? (
@@ -37,7 +37,7 @@ export default function MediaLibrary() {
                   {m.peakDb != null ? ` · Peak ${m.peakDb.toFixed(1)} dB` : ""}
                 </span>
               </div>
-              <button className="btn small" onClick={() => void loadInto(selectedTileId, m.id)}>
+              <button className="btn small" onClick={() => void loadInto(m.id)}>
                 Load
               </button>
             </div>

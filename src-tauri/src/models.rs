@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub type TileId = String;
 pub type MediaId = String;
@@ -64,12 +64,61 @@ pub enum PlaybackStatus {
     Error,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+/// How a deck repeats its media once it reaches the end:
+/// - `Off` – play once, then stop.
+/// - `Endless` – repeat seamlessly forever until stopped.
+/// - `Times(n)` – play the media exactly `n` times in total (n = 2..=5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoopMode {
     Off,
-    One,
-    All,
+    Endless,
+    Times(u8),
+}
+
+impl LoopMode {
+    /// Total number of playthroughs this mode wants (or 0 when not a count).
+    pub fn repeat_count(&self) -> u8 {
+        match *self {
+            LoopMode::Times(n) => n.clamp(2, 5),
+            _ => 0,
+        }
+    }
+}
+
+impl Serialize for LoopMode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(match *self {
+            LoopMode::Off => "off",
+            LoopMode::Endless => "endless",
+            LoopMode::Times(n) => match n.clamp(2, 5) {
+                2 => "x2",
+                3 => "x3",
+                4 => "x4",
+                _ => "x5",
+            },
+        })
+    }
+}
+
+impl<'de> Deserialize<'de> for LoopMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(match s.as_str() {
+            "endless" => LoopMode::Endless,
+            "x2" => LoopMode::Times(2),
+            "x3" => LoopMode::Times(3),
+            "x4" => LoopMode::Times(4),
+            "x5" => LoopMode::Times(5),
+            // Lenient: older builds persisted "one"/"all"; unknown → plain single play.
+            _ => LoopMode::Off,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

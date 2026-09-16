@@ -1,6 +1,6 @@
 export type MediaKind = "audio" | "video";
 export type PlaybackStatus = "stopped" | "loading" | "playing" | "paused" | "ended" | "error";
-export type LoopMode = "off" | "one" | "all";
+export type LoopMode = "off" | "endless" | "x2" | "x3" | "x4" | "x5";
 
 /** Deck outputs that list `id === DEFAULT_DEVICE_ID` follow the app-level
  *  default output device configured in Settings instead of pinning their own. */

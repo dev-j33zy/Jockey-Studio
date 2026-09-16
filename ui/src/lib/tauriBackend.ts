@@ -48,6 +48,10 @@ class TauriBackend implements Backend {
     await invoke("remove_tile", { tileId: id });
   }
 
+  async clearAll(): Promise<void> {
+    await invoke("reset_all");
+  }
+
   async reorderTiles(order: string[]): Promise<void> {
     await invoke("reorder_tiles", { order });
   }

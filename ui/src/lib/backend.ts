@@ -19,6 +19,7 @@ export interface Backend {
   addTiles(tiles: TileState[]): Promise<void>;
   addEmptyTiles(count: number): Promise<TileState[]>;
   removeTile(id: string): Promise<void>;
+  clearAll(): Promise<void>;
   reorderTiles(order: string[]): Promise<void>;
   loadMediaIntoTile(tileId: string, mediaId: string): Promise<TileState>;
   play(tileId: string): Promise<void>;

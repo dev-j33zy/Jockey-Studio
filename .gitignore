@@ -4,4 +4,6 @@ target/
 src-tauri/gen/
 *.log
 *.exe
+!/installers/
+!/installers/**
 .DS_Store

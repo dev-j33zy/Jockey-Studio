@@ -43,8 +43,9 @@ interface StoreState {
   loadDropped: (files: File[], paths: string[], targetTileId?: string) => Promise<void>;
   addDecks: (count?: number) => Promise<void>;
   removeTile: (id: string) => Promise<void>;
+  clearAll: () => Promise<void>;
   moveTileTo: (id: string, index: number) => Promise<void>;
-  loadInto: (tileId: string | null, mediaId: string) => Promise<void>;
+  loadInto: (mediaId: string) => Promise<void>;
   play: (id: string) => Promise<void>;
   pause: (id: string) => Promise<void>;
   stop: (id: string) => Promise<void>;
@@ -78,6 +79,7 @@ const EMPTY_SNAPSHOT: EngineSnapshot = {
 
 let polling = false;
 let debounceHandle: number | undefined;
+let loadChain: Promise<void> = Promise.resolve();
 
 function runErr(
   fn: () => Promise<void> | void,
@@ -238,7 +240,7 @@ export const useStore = create<StoreState>((set, get) => ({
         i = 1;
       }
       for (; i < items.length; i++) {
-        await get().loadInto(null, items[i].id);
+        await get().loadInto(items[i].id);
       }
       await get().refresh();
       await get().persist();
@@ -262,6 +264,15 @@ export const useStore = create<StoreState>((set, get) => ({
     }, (msg) => set({ error: msg }));
   },
 
+  async clearAll() {
+    await runErr(async () => {
+      await backend.clearAll();
+      set({ selectedTileId: null });
+      await get().refresh();
+      await get().persist();
+    }, (msg) => set({ error: msg }));
+  },
+
   async moveTileTo(id, index) {
     const order = get().snapshot.tiles.map((t) => t.id);
     const from = order.indexOf(id);
@@ -274,26 +285,27 @@ export const useStore = create<StoreState>((set, get) => ({
     await get().persist();
   },
 
-  async loadInto(tileId, mediaId) {
-    let target = tileId;
-    if (!target) {
-      const snap = get().snapshot;
-      target =
-        snap.tiles.find((t) => !t.media)?.id ??
-        snap.tiles.find((t) => t.status !== "playing")?.id ??
-        snap.tiles[0]?.id;
-      if (!target) {
-        await get().addDecks(1);
-        target = get().snapshot.tiles[0]?.id;
-      }
-      set({ selectedTileId: target });
-    }
-    if (!target) return;
-    await runErr(async () => {
-      await backend.loadMediaIntoTile(target, mediaId);
-      await get().refresh();
-      await get().persist();
-    }, (msg) => set({ error: msg }));
+  loadInto(mediaId) {
+    // Serialize loads so each click evaluates the deck list freshly: rapid
+    // clicks must never select the same empty deck or spawn duplicate decks.
+    loadChain = loadChain
+      .then(async () => {
+        await runErr(async () => {
+          const nextEmpty = get().snapshot.tiles.find((t) => !t.media);
+          let target = nextEmpty?.id ?? null;
+          if (!target) {
+            const created = await backend.addEmptyTiles(1);
+            await get().refresh();
+            target = created[0]?.id ?? null;
+          }
+          if (!target) return;
+          await backend.loadMediaIntoTile(target, mediaId);
+          await get().refresh();
+          await get().persist();
+        }, (msg) => set({ error: msg }));
+      })
+      .catch(() => undefined);
+    return loadChain;
   },
 
   play(id) {

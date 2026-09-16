@@ -15,10 +15,16 @@ export default function TopBar() {
         <button className="btn" onClick={() => void addDecks(1)}>
           + Add Deck
         </button>
-        <button className={`btn ${libraryOpen ? "active" : ""}`} onClick={() => toggleLibrary()}>
+        <button
+          className={`btn drawer-toggle ${libraryOpen ? "active" : ""}`}
+          onClick={() => toggleLibrary()}
+        >
           Library
         </button>
-        <button className={`btn ${settingsOpen ? "active" : ""}`} onClick={() => toggleSettings()}>
+        <button
+          className={`btn drawer-toggle ${settingsOpen ? "active" : ""}`}
+          onClick={() => toggleSettings()}
+        >
           Settings
         </button>
       </div>

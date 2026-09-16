@@ -52,6 +52,11 @@ pub fn remove_tile(app: tauri::AppHandle, tile_id: String) -> Result<(), String>
 }
 
 #[tauri::command(rename_all = "camelCase")]
+pub fn reset_all(app: tauri::AppHandle) -> Result<usize, String> {
+    Ok(engine(&app).reset_all())
+}
+
+#[tauri::command(rename_all = "camelCase")]
 pub fn reorder_tiles(app: tauri::AppHandle, order: Vec<String>) -> Result<(), String> {
     engine(&app).reorder_tiles(order);
     Ok(())

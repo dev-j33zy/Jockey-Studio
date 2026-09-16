@@ -102,9 +102,10 @@ impl TileShared {
     pub fn set_loop_mode(&self, m: LoopMode) {
         self.loop_mode.store(
             match m {
+                // Off = 0, Endless = 1, Times(n) encodes the play count itself.
                 LoopMode::Off => 0,
-                LoopMode::One => 1,
-                LoopMode::All => 2,
+                LoopMode::Endless => 1,
+                LoopMode::Times(n) => n,
             },
             Ordering::Relaxed,
         );
@@ -202,11 +203,16 @@ pub struct TilePlayer {
     pub am_hold: u64,
     pub level: Arc<LevelShared>,
     pub loop_mode: LoopMode,
+    loop_plays_remaining: u8,
     pub fades: FadeConfig,
     pub error: Option<String>,
     pub shared: Arc<TileShared>,
     pub stream: Option<KeepAlive>,
     pub sink: Option<Arc<Sink>>,
+    // Absolute time the current stream was seeked/started at. rodio's
+    // `get_pos()` counts from the start of the *current* sound, so the
+    // reported position is `pos_offset + sink.get_pos()`.
+    pos_offset: f64,
 }
 
 impl TilePlayer {
@@ -224,11 +230,13 @@ impl TilePlayer {
             am_hold: 0,
             level: Arc::new(LevelShared::default()),
             loop_mode: LoopMode::Off,
+            loop_plays_remaining: 0,
             fades: FadeConfig::default(),
             error: None,
             shared: Arc::new(TileShared::new()),
             stream: None,
             sink: None,
+            pos_offset: 0.0,
         }
     }
 
@@ -382,6 +390,7 @@ impl AudioEngine {
                 t.volume = st.volume;
                 t.muted = st.muted;
                 t.loop_mode = st.loop_mode;
+                t.loop_plays_remaining = st.loop_mode.repeat_count();
                 t.fades = st.fades;
                 t.device_id = st.device_id;
                 t.media = st.media.clone();
@@ -420,6 +429,56 @@ impl AudioEngine {
                 payload: serde_json::Value::Null,
             });
         }
+    }
+
+    /// Clear every deck back to its fresh empty state: stop playback, drop any
+    /// loaded media and its audio sinks, and reset volume, mute, loop, fades,
+    /// device routing and errors to their defaults. The number of decks and
+    /// their ids are preserved.
+    pub fn reset_all(&mut self) -> usize {
+        let ids: Vec<TileId> = self.tiles.iter().map(|t| t.id.clone()).collect();
+        for id in &ids {
+            self.reset_tile(id);
+        }
+        let count = ids.len();
+        self.emit(EngineEvent {
+            kind: "tile".into(),
+            action: "reset".into(),
+            tile_id: None,
+            payload: serde_json::json!({ "count": count }),
+        });
+        count
+    }
+
+    fn reset_tile(&mut self, tile_id: &str) {
+        let Some(idx) = self.tile_index(tile_id) else {
+            return;
+        };
+        self.restore_ducked(tile_id);
+        self.cancel_fade(idx);
+        let tile = &mut self.tiles[idx];
+        tile.sink = None;
+        tile.stream = None;
+        tile.duckers.clear();
+        tile.am_ducked = false;
+        tile.am_hold = 0;
+        tile.media = None;
+        tile.media_path = None;
+        tile.title = String::new();
+        tile.volume = 0.9;
+        tile.muted = false;
+        tile.loop_mode = LoopMode::Off;
+        tile.loop_plays_remaining = 0;
+        tile.device_id = DEFAULT_DEVICE_ID.to_string();
+        tile.fades = FadeConfig::default();
+        tile.error = None;
+        tile.shared.set_status(PlaybackStatus::Stopped);
+        tile.shared.set_position(0.0);
+        tile.shared.set_duration(0.0);
+        tile.shared.set_volume(0.9);
+        tile.shared.set_loop_mode(LoopMode::Off);
+        tile.shared.error.lock().take();
+        tile.shared.volume_ramp.store(false, Ordering::Relaxed);
     }
 
     pub fn reorder_tiles(&mut self, order: Vec<TileId>) {
@@ -463,6 +522,7 @@ impl AudioEngine {
         tile.shared.set_status(PlaybackStatus::Stopped);
         tile.shared.set_position(0.0);
         tile.shared.set_duration(media.duration_secs);
+        tile.loop_plays_remaining = tile.loop_mode.repeat_count();
 
         let st = self.tiles[idx].tile_state();
         self.emit(EngineEvent {
@@ -501,11 +561,22 @@ impl AudioEngine {
             }
         }
 
-        let from = if status == PlaybackStatus::Paused {
-            self.tiles[idx].shared.position()
-        } else {
-            0.0
+        // Resume from wherever the deck's timeline is: live for paused sinks,
+        // from the stored position otherwise. A ended track restarts from the
+        // top so pressing play after the song out begins it again.
+        let from = match status {
+            PlaybackStatus::Paused | PlaybackStatus::Stopped => {
+                self.tiles[idx].shared.position()
+            }
+            _ => 0.0,
         };
+
+        // The deck's loop mode is a high-level setting: a fresh playback
+        // session re-arms the counter so a `Times(n)` loop plays n times then
+        // ends. Resumes (paused) and seeks never re-arm it.
+        if matches!(status, PlaybackStatus::Stopped | PlaybackStatus::Ended) {
+            self.tiles[idx].loop_plays_remaining = self.tiles[idx].loop_mode.repeat_count();
+        }
 
         if let Err(err) = self.start_playback(idx, Some(from)) {
             self.fail_tile(idx, tile_id, err);
@@ -575,10 +646,13 @@ impl AudioEngine {
                 let t = &mut self.tiles[idx];
                 t.sink = None;
                 t.stream = None;
+                t.pos_offset = target;
                 t.shared.set_position(target);
             }
             _ => {
-                self.tiles[idx].shared.set_position(target);
+                let t = &mut self.tiles[idx];
+                t.pos_offset = target;
+                t.shared.set_position(target);
             }
         }
     }
@@ -624,6 +698,7 @@ impl AudioEngine {
         {
             let tile = &mut self.tiles[idx];
             tile.loop_mode = mode;
+            tile.loop_plays_remaining = mode.repeat_count();
             tile.shared.set_loop_mode(mode);
         }
         let restart = self.tiles[idx].sink.is_some()
@@ -739,6 +814,7 @@ impl AudioEngine {
             t.volume = pt.volume;
             t.muted = pt.muted;
             t.loop_mode = pt.loop_mode;
+            t.loop_plays_remaining = pt.loop_mode.repeat_count();
             t.fades = pt.fades.clone();
             if let Some(mid) = &pt.media_id {
                 if let Some(m) = self.media_by_id(mid) {
@@ -809,7 +885,7 @@ impl AudioEngine {
         } else {
             self.settings.default_device_id.clone()
         };
-        let is_loop = matches!(tile.loop_mode, LoopMode::One | LoopMode::All);
+        let is_loop = matches!(tile.loop_mode, LoopMode::Endless);
         let fade_in = tile.fades.fade_in;
         let effective_volume = if tile.muted { 0.0 } else { tile.volume };
         let start = from.unwrap_or(0.0).max(0.0);
@@ -860,6 +936,7 @@ impl AudioEngine {
         tile.error = None;
         tile.shared.error.lock().clone_from(&None);
         tile.shared.set_status(PlaybackStatus::Playing);
+        tile.pos_offset = start;
         tile.shared.set_position(start);
         tile.shared.set_duration(total.map(|d| d.as_secs_f64()).unwrap_or(0.0));
 
@@ -940,6 +1017,7 @@ impl AudioEngine {
         self.tick += 1;
         let mut events: Vec<(TileId, &'static str)> = Vec::new();
         let mut ended: Vec<TileId> = Vec::new();
+        let mut restart: Vec<TileId> = Vec::new();
         let mut engage: Vec<TileId> = Vec::new();
         let mut disengage: Vec<TileId> = Vec::new();
         let gate_db = self.settings.auto_mix_gate_db as f64;
@@ -1001,7 +1079,8 @@ impl AudioEngine {
             }
 
             // Position sync.
-            tile.shared.set_position(sink.get_pos().as_secs_f64());
+            tile.shared
+                .set_position(tile.pos_offset + sink.get_pos().as_secs_f64());
 
             // Pause-state sync.
             let paused = sink.is_paused();
@@ -1017,7 +1096,9 @@ impl AudioEngine {
                 _ => {}
             }
 
-            // End of track for one-shot sources.
+            // End of track for one-shot sources. Counted loop modes bring the
+            // next playthrough in with a fresh fade; `endless` never gets here
+            // because its source repeats seamlessly.
             if sink.empty()
                 && matches!(
                     tile.shared.status(),
@@ -1027,9 +1108,26 @@ impl AudioEngine {
                 sink.stop();
                 tile.sink = None;
                 tile.stream = None;
-                tile.shared.set_status(PlaybackStatus::Ended);
-                events.push((tile.id.clone(), "ended"));
-                ended.push(tile.id.clone());
+                if matches!(tile.loop_mode, LoopMode::Times(_))
+                    && tile.loop_plays_remaining > 1
+                {
+                    tile.loop_plays_remaining -= 1;
+                    restart.push(tile.id.clone());
+                } else {
+                    tile.shared.set_status(PlaybackStatus::Ended);
+                    events.push((tile.id.clone(), "ended"));
+                    ended.push(tile.id.clone());
+                }
+            }
+        }
+
+        for id in restart {
+            let idx = match self.tile_index(&id) {
+                Some(i) => i,
+                None => continue,
+            };
+            if let Err(err) = self.start_playback(idx, Some(0.0)) {
+                self.fail_tile(idx, &id, err);
             }
         }
 

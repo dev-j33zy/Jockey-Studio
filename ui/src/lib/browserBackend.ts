@@ -47,6 +47,7 @@ interface BTile {
   state: TileState;
   el: HTMLAudioElement | null;
   startedAtUrl: string;
+  playsLeft: number;
 }
 
 function newTileId(): string {
@@ -55,6 +56,14 @@ function newTileId(): string {
 
 function newMediaId(): string {
   return crypto.randomUUID?.() ?? `media-${Math.random().toString(36).slice(2)}`;
+}
+
+function loopCount(mode: LoopMode): number {
+  if (mode === "x2") return 2;
+  if (mode === "x3") return 3;
+  if (mode === "x4") return 4;
+  if (mode === "x5") return 5;
+  return 1;
 }
 
 function titleOf(name: string): string {
@@ -153,7 +162,7 @@ export class BrowserBackend implements Backend {
   }
 
   private makeTile(st: TileState): BTile {
-    return { state: { ...st }, el: null, startedAtUrl: "" };
+    return { state: { ...st }, el: null, startedAtUrl: "", playsLeft: 1 };
   }
 
   async removeTile(id: string): Promise<void> {
@@ -165,6 +174,35 @@ export class BrowserBackend implements Backend {
     }
     this.tiles.delete(id);
     this.tileOrder = this.tileOrder.filter((x) => x !== id);
+  }
+
+  async clearAll(): Promise<void> {
+    for (const t of this.tiles.values()) {
+      const el = t.el;
+      if (el) {
+        el.pause();
+        el.removeAttribute("src");
+        el.load();
+      }
+      t.el = null;
+      t.startedAtUrl = "";
+      t.state = {
+        id: t.state.id,
+        title: "",
+        deviceId: DEFAULT_DEVICE_ID,
+        status: "stopped",
+        positionSecs: 0,
+        durationSecs: 0,
+        volume: 0.9,
+        muted: false,
+        loopMode: "off",
+        fades: {
+          fadeIn: this.settings.defaultFadeIn,
+          fadeOut: this.settings.defaultFadeOut,
+          autoMix: true,
+        },
+      };
+    }
   }
 
   async reorderTiles(order: string[]): Promise<void> {
@@ -183,8 +221,23 @@ export class BrowserBackend implements Backend {
     el.preload = "auto";
     tile.el = el;
     el.addEventListener("ended", () => {
-      if (tile.state.loopMode !== "off") {
+      const mode = tile.state.loopMode;
+      if (mode === "endless") {
+        // el.loop is already true — ended won't fire; this branch is a no-op
+        // guard.
+        return;
+      }
+      if (mode === "off") {
+        tile.state.status = "ended";
+        tile.state.positionSecs = tile.state.durationSecs;
+        return;
+      }
+      // Counted loop: decrement and replay until exhausted.
+      tile.playsLeft = Math.max(0, tile.playsLeft - 1);
+      if (tile.playsLeft > 0) {
         el.currentTime = 0;
+        tile.state.positionSecs = 0;
+        tile.state.status = "playing";
         void el.play();
       } else {
         tile.state.status = "ended";
@@ -226,10 +279,12 @@ export class BrowserBackend implements Backend {
       void el.play();
       tile.state.status = "playing";
     } else if (tile.state.status === "ended") {
+      tile.playsLeft = loopCount(tile.state.loopMode);
       el.currentTime = 0;
       void el.play();
       tile.state.status = "playing";
     } else if (tile.state.status === "stopped") {
+      tile.playsLeft = loopCount(tile.state.loopMode);
       void el.play();
       tile.state.status = "playing";
     }
@@ -282,7 +337,8 @@ export class BrowserBackend implements Backend {
     const tile = this.tiles.get(tileId);
     if (!tile) return;
     tile.state.loopMode = mode;
-    if (tile.el) tile.el.loop = mode !== "off";
+    tile.playsLeft = loopCount(mode);
+    if (tile.el) tile.el.loop = mode === "endless";
   }
 
   async setFades(tileId: string, fades: FadeConfig): Promise<void> {

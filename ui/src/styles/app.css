@@ -177,7 +177,7 @@ button {
   color: var(--text);
 }
 
-.clear-selection {
+.clear-decks {
   position: fixed;
   right: 18px;
   bottom: 18px;
@@ -187,6 +187,12 @@ button {
   border-radius: 8px;
   padding: 8px 14px;
   z-index: 5;
+  cursor: pointer;
+}
+
+.clear-decks:hover {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
 }
 
 /* ------------------------------------------------ deck tile */
@@ -320,7 +326,6 @@ button {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  cursor: pointer;
   flex: 1 1 auto;
 }
 
@@ -340,9 +345,82 @@ button {
   margin-bottom: 2px;
 }
 
+.seek-wrap {
+  position: relative;
+  padding: 10px 0 6px;
+}
+
 input[type="range"].seek {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  accent-color: var(--accent);
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--seek-pct, 0%),
+    rgba(120, 140, 170, 0.35) var(--seek-pct, 0%)
+  );
+  outline: none;
+  cursor: pointer;
+  margin: 0;
+}
+
+input[type="range"].seek::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: transparent;
+  border-radius: 999px;
+}
+
+input[type="range"].seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+  margin-top: -4px;
+}
+
+input[type="range"].seek:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+input[type="range"].seek:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+input[type="range"].seek:disabled::-webkit-slider-thumb {
+  background: var(--border);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.seek-tip {
+  position: absolute;
+  top: -18px;
+  transform: translateX(-50%);
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.4px;
+  border-radius: 8px;
+  color: var(--text);
+  background: rgba(24, 28, 36, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 3;
 }
 
 .tile-center {
@@ -519,9 +597,20 @@ input[type="range"].vol-v {
   left: auto;
   right: 0;
   transform: none;
-  width: 210px;
+  width: 308px;
+  max-width: 92vw;
   align-items: stretch;
   animation-name: pop-in-right;
+}
+
+.pop-fixed {
+  position: fixed;
+  top: auto;
+  bottom: auto;
+  left: auto;
+  right: auto;
+  transform: none;
+  animation: none;
 }
 
 @keyframes pop-in-right {
@@ -547,7 +636,7 @@ input[type="range"].vol-v {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 220px;
+  max-height: 320px;
   overflow-y: auto;
 }
 
@@ -593,6 +682,73 @@ input[type="range"].vol-v {
 .dev-mark {
   flex: 0 0 auto;
   display: inline-flex;
+  color: var(--accent);
+}
+
+.loop-pop {
+  left: auto;
+  right: 0;
+  transform: none;
+  width: 190px;
+  max-width: 92vw;
+  align-items: stretch;
+  animation-name: pop-in-right;
+}
+
+.loop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.loop-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.loop-item:hover {
+  background: var(--panel-3);
+}
+
+.loop-item.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.loop-name {
+  font-size: 13px;
+  flex: 1;
+}
+
+.loop-icon {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.loop-icon-badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 600;
+  color: inherit;
+  line-height: 1;
+}
+
+.loop-item.active .loop-icon-badge {
   color: var(--accent);
 }
 

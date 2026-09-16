@@ -25,6 +25,7 @@ pub fn run() {
             commands::media::add_tiles,
             commands::media::add_empty_tiles,
             commands::media::remove_tile,
+            commands::media::reset_all,
             commands::media::reorder_tiles,
             commands::media::load_media_into_tile,
             commands::media::play,
