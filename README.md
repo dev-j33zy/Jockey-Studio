@@ -4,19 +4,21 @@ Multi-deck audio mixing player built with **Tauri 2**, **React** and **Rust (rod
 
 ## Features
 
-- **Multiple persistent decks** — every tile has its own volume, mute, repeat, loop region, output device and fade settings; the full layout is saved between sessions.
+- **Multiple persistent decks** — every tile has its own volume, mute, loop repeats (off / endless / 2×–5×), output device and fade settings; the full layout is saved between sessions.
 - **Native device routing** — a default output device can be set in Settings (System Default or any device); every deck follows it unless you pick a specific output on the deck, and per-deck picks persist until the deck is removed.
 - **Per-deck fades** — adjustable fade-in/out (seconds) applied on the next play.
 - **Auto-mix (vMix group style)** — per-deck on/off. While a deck's signal is above the gate, it ducks every OTHER deck that also has auto-mix engaged; once it stays below the gate for the hold time, the others ramp back up. Decks without auto-mix are never touched. Attack/release/hold timing is configurable (seconds, decimal precision).
-- **Drag & drop reorder** — drag a deck by its header to reorder tiles; dropping files onto a tile loads them.
-- **In-app auto-update** — a silent check against GitHub releases at launch, an update bubble + dialog, and a one-click silent installer update with auto-relaunch.
+- **Drag & drop reorder** — drag a deck by its header to reorder tiles to any position; dropping files onto a tile loads them.
+- **Clear all decks** — stop all playback and reset every deck to a fresh empty state (decks and their order are kept).
+- **In-app auto-update** — a silent check against GitHub releases at launch, an update bubble + dialog, and a one-click silent installer update with auto-relaunch (Windows `.exe` and macOS `.dmg`).
 
 ## Auto-update
 
 - Updates are fetched from `https://github.com/dev-j33zy/Jockey-Studio/releases/latest`.
-- Version tags are compared with semver (a leading `v` is stripped); the first release asset ending in `.exe` is treated as the Windows installer.
+- Version tags are compared with semver (a leading `v` is stripped). The update package is picked per platform: the first release asset ending in `.exe` on Windows (NSIS) and the first `.dmg` on macOS (Apple Silicon).
 - Flow: silent check on launch → bottom-right bubble → updater dialog with release notes → **Install Now** downloads the installer, closes the app, silently installs and relaunches.
 - Manual check: **Settings → Check for Updates**.
+- Windows builds embed the WebView2 bootstrapper into the NSIS installer, so the silent install also provisions the WebView2 runtime when missing.
 
 ## Installation
 
@@ -27,8 +29,11 @@ npm run tauri -- build
 ```
 
 Outputs:
-- Installer: `src-tauri/target/release/bundle/nsis/Jockey Studio_<version>_x64-setup.exe`
-- Portable exe (no bundle): `npm run tauri -- build --no-bundle` → `src-tauri/target/release/jockey-studio.exe`
+- Windows installer (NSIS): `src-tauri/target/release/bundle/nsis/Jockey Studio_<version>_x64-setup.exe`
+- Windows portable exe (no bundle): `npm run tauri -- build --no-bundle` → `src-tauri/target/release/jockey-studio.exe`
+- macOS (Apple Silicon): `npm run tauri -- build --bundles app,dmg` → `src-tauri/target/release/bundle/dmg/Jockey Studio_<version>_aarch64.dmg`
+
+GitHub Actions builds both installers automatically and attaches them to versioned releases (`v*` tags); see `.github/workflows/build.yml`.
 
 ### Code signing (Windows SmartScreen)
 
@@ -40,7 +45,7 @@ Installers are signed with the locally-issued self-signed certificate **"Jockey 
 
 ## Development
 
-Prerequisites: Node.js 20+, Rust (stable), and on Windows the WebView2 runtime.
+Prerequisites: Node.js 20+, Rust (stable). Windows installers embed the WebView2 bootstrapper, so no separate WebView2 runtime installation is required.
 
 ```
 npm install
