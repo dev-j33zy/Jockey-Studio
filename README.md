@@ -18,7 +18,7 @@ Multi-deck audio mixing workstation for Windows, built with **.NET 8 / WPF** and
 
 ## Installation
 
-Grab the latest release from the [GitHub releases page](https://github.com/dev-j33zy/Jockey-Studio/releases) and run `Jockey Studio_<version>_x64.exe`. It is a self-contained, single-file `.exe` — no runtime install needed.
+Grab the latest release from the [GitHub releases page](https://github.com/dev-j33zy/Jockey-Studio/releases) and run `JockeyStudio_<version>_x64.exe`. It is a self-contained, single-file `.exe` — no runtime install needed.
 
 ### Building the installer yourself
 
@@ -32,7 +32,7 @@ The single-file `JockeyStudio.exe` lands in the project's `bin\Release\net8.0-wi
 
 ### Releases (CI)
 
-Every `v*` tag triggers `.github/workflows/build.yml`, which publishes the Windows build on GitHub Actions and attaches `Jockey Studio_<version>_x64.exe` to the matching release with its `CHANGELOG.md` section as the notes. That exe asset is exactly what the in-app updater downloads — the release and its asset are the app's update feed.
+Every `v*` tag triggers `.github/workflows/build.yml`, which publishes the Windows build on GitHub Actions and attaches `JockeyStudio_<version>_x64.exe` to the matching release with its `CHANGELOG.md` section as the notes. That exe asset is exactly what the in-app updater downloads — the release and its asset are the app's update feed.
 
 ## Auto-update
 

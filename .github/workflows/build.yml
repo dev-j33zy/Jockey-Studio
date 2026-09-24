@@ -55,7 +55,7 @@ jobs:
         shell: bash
         run: |
           VER="${GITHUB_REF_NAME#v}"
-          mv publish_out/JockeyStudio.exe "publish_out/Jockey Studio_${VER}_x64.exe"
+          mv publish_out/JockeyStudio.exe "publish_out/JockeyStudio_${VER}_x64.exe"
           awk -v v="$VER" '
             $0 ~ ("^## " v " ") {on=1; print; next}
             on && /^## / {exit}

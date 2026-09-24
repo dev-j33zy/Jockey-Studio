@@ -12,7 +12,7 @@ Native WPF rewrite (Windows).
 - **Live loop switching** — changing a deck's loop mode while it plays no longer tears down the pipeline; the current playthrough becomes #1 of the new selection in place.
 - **Cleaner popups** — loop, volume and output device modals close when they lose focus and switch cleanly when another control is clicked (one modal at a time across all decks).
 - **Loop dropdown polish** — aligned `Off / Endless / 2×–5×` items with the repeat badge kept on the deck's loop button as the active-mode indicator.
-- **Self-contained installer** — distributed as a self-contained single-file `Jockey Studio <version> _x64.exe`; the updater replaces the executable in place and relaunches.
+- **Self-contained installer** — distributed as a self-contained single-file `JockeyStudio_<version>_x64.exe`; the updater replaces the executable in place and relaunches.
 
 ## 0.1.2 — 2026-09-16
 
