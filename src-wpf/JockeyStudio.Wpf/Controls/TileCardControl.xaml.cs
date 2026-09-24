@@ -258,6 +258,7 @@ public partial class TileCardControl : UserControl
         Seek.PreviewMouseLeftButtonUp += Seek_PreviewMouseLeftButtonUp;
         VolumeSlider.ValueChanged += VolumeSlider_ValueChanged;
         VolumeSlider.PreviewMouseLeftButtonDown += VolumeSlider_PreviewMouseLeftButtonDown;
+        VolumeSlider.MouseWheel += VolumeSlider_MouseWheel;
         PopupVeil.MouseDown += PopupVeil_MouseDown;
         VolumePopup.Opened += Popup_Opened;
         DevicePopup.Opened += Popup_Opened;
@@ -651,6 +652,16 @@ public partial class TileCardControl : UserControl
     {
         if (_updating || _deck == null) return;
         _deck.SetVolumeEffective((float)e.NewValue);
+    }
+
+    private void VolumeSlider_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        // Scroll-wheel adjusts the fader (wheel up raises). Handled so the
+        // wheel doesn't also scroll the popup behind it.
+        e.Handled = true;
+        double step = VolumeSlider.SmallChange > 0 ? VolumeSlider.SmallChange : 0.05;
+        double value = VolumeSlider.Value + (e.Delta > 0 ? step : -step);
+        VolumeSlider.Value = Math.Clamp(value, VolumeSlider.Minimum, VolumeSlider.Maximum);
     }
 
     private void Seek_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
