@@ -35,9 +35,9 @@ public sealed class AppState
 }
 
 /// <summary>App-state persistence (1:1 of src-tauri/src/storage.rs). Serialized
-/// to the same file the Tauri build used (%APPDATA%/com.cjaycapillo.jockeystudio
-/// /app-state.json), so a WPF install picks up the playlist, decks and settings
-/// a user had in the webview app. Writes are atomic (tmp file + replace).</summary>
+/// to app-state.json under the app's bundle-identifier folder
+/// (%APPDATA%/com.jockeystudio.app), picking up playlists, decks and settings.
+/// Writes are atomic (tmp file + replace).</summary>
 public static class StatePersistence
 {
     private static readonly JsonSerializerOptions Options = new()
@@ -50,7 +50,7 @@ public static class StatePersistence
 
     public static string StatePath { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "com.cjaycapillo.jockeystudio", "app-state.json");
+        "com.jockeystudio.app", "app-state.json");
 
     /// <summary>Read the persisted state, or null when there is nothing to
     /// restore (missing file or unreadable/corrupt payload — fall back on a

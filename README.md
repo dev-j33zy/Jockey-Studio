@@ -48,12 +48,12 @@ In the app folder — `%LOCALAPPDATA%\Jockey Studio\`, or `%LOCALAPPDATA%\Progra
 Also delete:
 
 - `%TEMP%\jockey-studio-update\` — stale updater payload (`jockey-studio-setup.exe`, `run-update.cmd`).
-- `%LOCALAPPDATA%\com.cjaycapillo.jockeystudio\` — old Rust local data.
+- `%LOCALAPPDATA%\com.cjaycapillo.jockeystudio\` and `%APPDATA%\com.cjaycapillo.jockeystudio\` — data folders from older builds that used the old bundle identifier (present only if such a build ran on the machine).
 - Old `Downloads\Jockey.Studio_0.1.x_x64-setup.exe` installers, if any.
 
 **Keep** (do not delete):
 
-- `%APPDATA%\com.cjaycapillo.jockeystudio\` — shared settings/state that the WPF app also uses.
+- `%APPDATA%\com.jockeystudio.app\` — the app's settings/state folder (current bundle identifier).
 - Start Menu / desktop shortcuts — repoint them if you moved the app folder, otherwise they keep working.
 
 ## Auto-update

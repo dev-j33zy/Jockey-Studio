@@ -16,7 +16,7 @@ public static class AppPrefs
 
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "com.cjaycapillo.jockeystudio", "app-settings.json");
+        "com.jockeystudio.app", "app-settings.json");
 
     public static ThemeMode Theme { get; private set; } = ThemeMode.System;
     public static double Zoom { get; private set; } = 1.0;
