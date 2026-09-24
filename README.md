@@ -36,6 +36,26 @@ The single-file `JockeyStudio.exe` lands in the project's `bin\Release\net8.0-wi
 
 Every `v*` tag triggers `.github/workflows/build.yml`, which publishes the Windows build on GitHub Actions and attaches `JockeyStudio_<version>_x64.exe` to the matching release with its `CHANGELOG.md` section as the notes. That exe asset is exactly what the in-app updater downloads — the release and its asset are the app's update feed.
 
+### Upgrading a machine that ran the 0.1.x (Tauri/Rust) builds
+
+The old Rust app ships its own updater, so a machine that ran 0.1.x keeps its installed Rust copy alongside the new WPF app. If a launch re-opens the old version (it will re-offer the update on every run), clean the machine once, per user account:
+
+In the app folder — `%LOCALAPPDATA%\Jockey Studio\`, or `%LOCALAPPDATA%\Programs\Jockey Studio\` (occasionally on a non-system drive):
+
+- **Replace** `jockey-studio.exe` with the current release `.exe` — keep this file, not delete: it keeps the shortcut and the in-place updater working.
+- **Delete** the Rust-only files: `uninstall.exe`, `WebView2Loader.dll`, the `resources\` folder, `unins000.exe` / `unins000.dat`.
+
+Also delete:
+
+- `%TEMP%\jockey-studio-update\` — stale updater payload (`jockey-studio-setup.exe`, `run-update.cmd`).
+- `%LOCALAPPDATA%\com.cjaycapillo.jockeystudio\` — old Rust local data.
+- Old `Downloads\Jockey.Studio_0.1.x_x64-setup.exe` installers, if any.
+
+**Keep** (do not delete):
+
+- `%APPDATA%\com.cjaycapillo.jockeystudio\` — shared settings/state that the WPF app also uses.
+- Start Menu / desktop shortcuts — repoint them if you moved the app folder, otherwise they keep working.
+
 ## Auto-update
 
 - Updates are fetched from `https://github.com/dev-j33zy/Jockey-Studio/releases/latest`.
