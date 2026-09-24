@@ -16,8 +16,7 @@ Multi-deck audio mixing workstation for Windows, built with **.NET 8 / WPF** and
 - **Appearance & layout** — light/dark/system themes, full screen (F11), zoom, and a deck finder (Ctrl+F).
 - **In-app auto-update** — a silent check against GitHub releases at launch, an update bubble + dialog, and a one-click update that swaps in the new build and relaunches (self-contained single-file `.exe`).
 
-<img width="1486" height="893" alt="image" src="https://github.com/user-attachments/assets/9e46ccbb-7fbe-430f-bb57-07600d3fc0f8" />
-
+<img width="1486" height="893" alt="Jockey Studio screenshot" src="https://github.com/user-attachments/assets/9e46ccbb-7fbe-430f-bb57-07600d3fc0f8" />
 
 ## Installation
 
