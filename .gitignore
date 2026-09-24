@@ -1,9 +1,7 @@
-node_modules/
-dist/
-target/
-src-tauri/gen/
-*.log
+bin/
+obj/
 *.exe
 !/installers/
 !/installers/**
+*.log
 .DS_Store

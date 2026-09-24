@@ -1,0 +1,26 @@
+<UserControl x:Class="JockeyStudio.Wpf.Controls.UpdateBubbleControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,18,18">
+
+  <Grid>
+    <Border Style="{StaticResource BubbleRoot}">
+      <StackPanel Orientation="Horizontal">
+        <StackPanel Margin="0,0,12,0" MinWidth="150" VerticalAlignment="Center">
+          <TextBlock FontWeight="SemiBold" Text="Update available"/>
+          <TextBlock x:Name="BubbleVersionText" FontSize="11" Foreground="{DynamicResource TextDimBrush}"
+                     Text="v0.2.0"/>
+        </StackPanel>
+        <Button x:Name="DismissButton" Style="{StaticResource TbBubbleDismiss}"
+                ToolTip="Dismiss update notification"
+                Click="DismissButton_Click">
+          <ContentControl Width="12" Height="12" Content="" ContentTemplate="{StaticResource IconClose}"
+                          Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+        </Button>
+      </StackPanel>
+    </Border>
+    <Rectangle Width="3" Fill="{StaticResource AccentBrush}" HorizontalAlignment="Left"
+               VerticalAlignment="Stretch" Margin="2,3,0,3" RadiusX="1.5" RadiusY="1.5"
+               IsHitTestVisible="False"/>
+  </Grid>
+</UserControl>

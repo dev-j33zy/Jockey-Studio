@@ -1,0 +1,52 @@
+<UserControl x:Class="JockeyStudio.Wpf.Controls.TopBarControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:JockeyStudio.Wpf.Helpers"
+             xmlns:local="clr-namespace:JockeyStudio.Wpf.Controls">
+  <Border Background="{DynamicResource PanelBrush}"
+          BorderBrush="{DynamicResource BorderBrush}"
+          BorderThickness="0,0,0,1"
+          Padding="18,12">
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- Brand: dot + title + version badge -->
+      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+        <Border Width="14" Height="14" CornerRadius="7"
+                Background="{StaticResource BrandDotBrush}">
+          <Border.Effect>
+            <DropShadowEffect BlurRadius="12" ShadowDepth="0" Color="#8C4F8CFF"/>
+          </Border.Effect>
+        </Border>
+        <local:TrackedText Margin="10,0,0,0" FontSize="16" FontWeight="SemiBold" LetterSpacing="0.4"
+                   Foreground="{DynamicResource TextBrush}"
+                   Text="Jockey Studio" VerticalAlignment="Center"/>
+        <Border Style="{StaticResource Badge}" Margin="10,0,0,0">
+          <TextBlock FontSize="11" Foreground="{DynamicResource TextDimBrush}" Text="Native"
+                     VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        </Border>
+      </StackPanel>
+
+      <!-- Actions -->
+      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right"
+                  VerticalAlignment="Center">
+        <Button x:Name="AddDeckButton" Style="{StaticResource TbCtlIcon}" ToolTip="New Deck"
+                Click="AddDeckButton_Click">
+          <ContentControl Width="22" Height="22" Content=""
+                          ContentTemplate="{StaticResource IconPlus}"
+                          Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+        </Button>
+        <Button x:Name="LibraryButton" Style="{StaticResource TbCtlIcon}" Margin="8,0,0,0"
+                helpers:Ctl.IsActive="{Binding IsLibraryOpen, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                ToolTip="Library" Click="LibraryButton_Click">
+          <ContentControl Width="22" Height="22" Content=""
+                          ContentTemplate="{StaticResource IconLibrary}"
+                          Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+        </Button>
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

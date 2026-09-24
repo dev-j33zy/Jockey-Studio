@@ -1,73 +1,65 @@
 # Jockey Studio
 
-Multi-deck audio mixing player built with **Tauri 2**, **React** and **Rust (rodio)**. Load music onto floating tiles, route each tile to any output device, and mix with fades, loops and per-deck auto-mix.
+Multi-deck audio mixing workstation for Windows, built with **.NET 8 / WPF** and **NAudio**. Load music onto decks, route each deck to any output device, and mix with fades, loops and per-deck auto-mix.
 
 ## Features
 
-- **Multiple persistent decks** — every tile has its own volume, mute, loop repeats (off / endless / 2×–5×), output device and fade settings; the full layout is saved between sessions.
+- **Multiple persistent decks** — every deck has its own volume, mute, loop repeats (off / endless / 2×–5×), output device and fade settings; the full layout is saved between sessions.
 - **Native device routing** — a default output device can be set in Settings (System Default or any device); every deck follows it unless you pick a specific output on the deck, and per-deck picks persist until the deck is removed.
 - **Per-deck fades** — adjustable fade-in/out (seconds) applied on the next play.
-- **Auto-mix (vMix group style)** — per-deck on/off. While a deck's signal is above the gate, it ducks every OTHER deck that also has auto-mix engaged; once it stays below the gate for the hold time, the others ramp back up. Decks without auto-mix are never touched. Attack/release/hold timing is configurable (seconds, decimal precision).
-- **Drag & drop reorder** — drag a deck by its header to reorder tiles to any position; dropping files onto a tile loads them.
+- **Auto-mix (vMix group style)** — per-deck on/off. While a deck's signal is above the gate, it ducks every OTHER deck that also has auto-mix engaged; once it stays below the gate for the hold time, the others ramp back up. Decks without auto-mix are never touched. Timing is configurable (seconds, decimal precision).
+- **Live loop switching** — changing a deck's loop mode while it plays applies immediately in place; the current playthrough becomes #1 of the new selection, no pipeline restart.
+- **Media library** — a sliding drawer on the right lists your library for one-click loading; dropping files onto a deck loads them too.
+- **Drag & drop reorder** — drag a deck by its header to reorder tiles to any position.
+- **Playlists** — open/save decks as playlists (`File → Open/Save Playlist`), including layout, device and loop settings.
 - **Clear all decks** — stop all playback and reset every deck to a fresh empty state (decks and their order are kept).
-- **In-app auto-update** — a silent check against GitHub releases at launch, an update bubble + dialog, and a one-click silent installer update with auto-relaunch (Windows `.exe` and macOS `.dmg`).
+- **Appearance & layout** — light/dark/system themes, full screen (F11), zoom, and a deck finder (Ctrl+F).
+- **In-app auto-update** — a silent check against GitHub releases at launch, an update bubble + dialog, and a one-click update that swaps in the new build and relaunches (self-contained single-file `.exe`).
+
+## Installation
+
+Grab the latest release from the [GitHub releases page](https://github.com/dev-j33zy/Jockey-Studio/releases) and run `Jockey Studio_<version>_x64.exe`. It is a self-contained, single-file `.exe` — no runtime install needed.
+
+### Building the installer yourself
+
+```
+dotnet publish src-wpf\JockeyStudio.Wpf\JockeyStudio.Wpf.csproj -c Release -r win-x64 `
+  --self-contained true -p:PublishSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
+```
+
+The published executable is copied to `installers\windows\Jockey Studio_<version>_x64.exe`. A self-contained build carries its own .NET 8 runtime, so it runs on any Windows 10/11 (x64) machine.
 
 ## Auto-update
 
 - Updates are fetched from `https://github.com/dev-j33zy/Jockey-Studio/releases/latest`.
-- Version tags are compared with semver (a leading `v` is stripped). The update package is picked per platform: the first release asset ending in `.exe` on Windows (NSIS) and the first `.dmg` on macOS (Apple Silicon).
-- Flow: silent check on launch → bottom-right bubble → updater dialog with release notes → **Install Now** downloads the installer, closes the app, silently installs and relaunches.
-- Manual check: **Settings → Check for Updates**.
-- Windows builds embed the WebView2 bootstrapper into the NSIS installer, so the silent install also provisions the WebView2 runtime when missing.
-
-## Installation
-
-Build the current installer:
-
-```
-npm run tauri -- build
-```
-
-Outputs:
-- Windows installer (NSIS): `src-tauri/target/release/bundle/nsis/Jockey Studio_<version>_x64-setup.exe`
-- Windows portable exe (no bundle): `npm run tauri -- build --no-bundle` → `src-tauri/target/release/jockey-studio.exe`
-- macOS (Apple Silicon): `npm run tauri -- build --bundles app,dmg` → `src-tauri/target/release/bundle/dmg/Jockey Studio_<version>_aarch64.dmg`
-
-GitHub Actions builds both installers automatically and attaches them to versioned releases (`v*` tags); see `.github/workflows/build.yml`.
-
-### Code signing (Windows SmartScreen)
-
-Installers are signed with the locally-issued self-signed certificate **"Jockey Studio"** (SHA-256, RFC3161 timestamp), which is installed into the machine's **Trusted Root** and **Trusted Publishers** stores.
-
-- On a machine where that certificate is trusted, SmartScreen installs without a warning (publisher shows "Jockey Studio").
-- On any other machine the certificate chain is self-signed, so SmartScreen will still flag it as "Unknown publisher" — install a commercial code-signing cert (e.g. DigiCert) and resign for global distribution.
-- Signing is automated via the PowerShell helper in `scripts/sign-release.ps1` (creates the cert if missing, trusts it, downloads a recent release build, signs and verifies).
+- Version tags are compared with semver (a leading `v` is stripped). The update package is the first release asset ending in `.exe` (the self-contained single-file build).
+- Flow: silent check on launch → bottom-right bubble → updater dialog with the release notes → **Install Now** downloads the new `.exe`, closes the app, replaces the running executable and relaunches.
+- Manual check: **Help → Check for Updates**, or **Help → About → Updates** tab.
 
 ## Development
 
-Prerequisites: Node.js 20+, Rust (stable). Windows installers embed the WebView2 bootstrapper, so no separate WebView2 runtime installation is required.
+Prerequisites: .NET 8 SDK (Windows).
 
 ```
-npm install
-npm run dev               # Tauri dev window + Vite HMR (opens on localhost:5173)
-npm run build             # type-check + Vite production build (ui/dist)
-npm run test              # UI unit tests (vitest)
-npm run test:rust         # Rust unit tests
-npm run tauri -- dev      # run the desktop app in dev mode
+dotnet run --project src-wpf\JockeyStudio.Wpf    # run the desktop app in dev mode
+dotnet build src-wpf\JockeyStudio.Wpf\JockeyStudio.Wpf.csproj -c Debug
 ```
-
-> Note: `cargo test` may exit with `0xc0000139` on some Tauri setups (known toolchain quirk); the UI tests and both builds are the reliable checks.
 
 ## Structure
 
 ```
-ui/                 React + TypeScript app (Vite), renderer logic, store, components
-src-tauri/          Rust backend: audio engine (rodio), persistence, auto-updater
-src-tauri/src/      lib.rs (commands), audio/engine.rs, updater.rs, models.rs
-scripts/            build/signing utilities (generate-icon, sign-release)
+src-wpf/
+  JockeyStudio.Wpf/           .NET 8 / WPF app (NAudio)
+    Controls/                 tile cards, top bar, library drawer, settings/about/update dialogs
+    Engine/                   deck player (WASAPI), auto-mix, looping, device library, updater, persistence
+    Helpers/                  app preferences, theme manager
+    Themes/                   colors (dark/light) and control styles
+installers/windows/           published self-contained installers
+CHANGELOG.md                  release notes
 ```
 
-Engine settings (auto-mix amount, gate, attack/release/hold) live in the Rust persistence model and are serialized as part of the app state.
+Engine settings (auto-mix amount, gate, attack/release/hold, default device) live in the persisted app state.
 
 ## License
 
