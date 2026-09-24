@@ -1,7 +1,6 @@
 bin/
 obj/
+installers/
 *.exe
-!/installers/
-!/installers/**
 *.log
 .DS_Store

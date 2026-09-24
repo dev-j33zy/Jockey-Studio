@@ -1,0 +1,71 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  windows:
+    name: Windows (self-contained)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish single-file build
+        shell: pwsh
+        run: |
+          dotnet publish src-wpf/JockeyStudio.Wpf/JockeyStudio.Wpf.csproj -c Release -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=None -p:DebugSymbols=false `
+            -o publish_out
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jockey-studio-windows
+          path: publish_out/*.exe
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: jockey-studio-*
+          merge-multiple: true
+          path: publish_out
+
+      - name: Prepare asset name and release notes
+        shell: bash
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          mv publish_out/JockeyStudio.exe "publish_out/Jockey Studio_${VER}_x64.exe"
+          awk -v v="$VER" '
+            $0 ~ ("^## " v " ") {on=1; print; next}
+            on && /^## / {exit}
+            on {print}
+          ' CHANGELOG.md > release-notes.md
+          echo "RELEASE_NAME=Jockey Studio $VER" >> "$GITHUB_ENV"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ env.RELEASE_NAME }}
+          body_path: release-notes.md
+          files: publish_out/*

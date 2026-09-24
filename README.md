@@ -28,7 +28,11 @@ dotnet publish src-wpf\JockeyStudio.Wpf\JockeyStudio.Wpf.csproj -c Release -r wi
   -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
 ```
 
-The published executable is copied to `installers\windows\Jockey Studio_<version>_x64.exe`. A self-contained build carries its own .NET 8 runtime, so it runs on any Windows 10/11 (x64) machine.
+The single-file `JockeyStudio.exe` lands in the project's `bin\Release\net8.0-windows\win-x64\publish\` output. A self-contained build carries its own .NET 8 runtime, so it runs on any Windows 10/11 (x64) machine.
+
+### Releases (CI)
+
+Every `v*` tag triggers `.github/workflows/build.yml`, which publishes the Windows build on GitHub Actions and attaches `Jockey Studio_<version>_x64.exe` to the matching release with its `CHANGELOG.md` section as the notes. That exe asset is exactly what the in-app updater downloads — the release and its asset are the app's update feed.
 
 ## Auto-update
 
@@ -55,7 +59,7 @@ src-wpf/
     Engine/                   deck player (WASAPI), auto-mix, looping, device library, updater, persistence
     Helpers/                  app preferences, theme manager
     Themes/                   colors (dark/light) and control styles
-installers/windows/           published self-contained installers
+.github/workflows/            CI: publish + attach release assets on v* tags
 CHANGELOG.md                  release notes
 ```
 
