@@ -9,5 +9,5 @@ public static class AppInfo
 {
     /// <summary>The running build version (e.g. "0.1.2").</summary>
     public static string Version =>
-        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.2.1";
+        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.2.2";
 }

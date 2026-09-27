@@ -17,17 +17,28 @@ public sealed class UpdateInfo
 }
 
 /// <summary>Self-update check + installer handoff. The check compares the latest
-/// GitHub release against the running build; the install downloads the
-/// self-contained single-file .exe and hands it to a detached helper that
-/// (1) waits for this process to exit, (2) replaces the running executable and
-/// (3) relaunches the app — then the caller exits.</summary>
+/// GitHub release against the running build; the install downloads the release's
+/// installer and hands it to Windows, which elevates it (UAC) and it upgrades the
+/// Program Files install in place, then relaunches the app — the caller exits.</summary>
 public static class Updater
 {
     /// <summary>GitHub repository that hosts this app's releases, e.g. "user/repo".</summary>
     public const string GithubRepo = "dev-j33zy/Jockey-Studio";
 
     private const string UserAgent = "JockeyStudio-Updater";
-    private const string InstallSuffix = ".exe";
+
+    /// <summary>Only the Inno Setup payload is a valid update asset. The app is
+    /// installed per-machine under Program Files, so an update is a reinstall —
+    /// matching this suffix is what keeps a portable build (or any other .exe on
+    /// the release) from being mistaken for the installer.</summary>
+    private const string InstallSuffix = "-setup.exe";
+
+    /// <summary>Silent install. The setup's own manifest triggers UAC, so
+    /// ShellExecute (not CreateProcess) is what raises the consent prompt;
+    /// /CLOSEAPPLICATIONS lets Restart Manager release this app's own locked
+    /// executable, and the setup's postinstall run entry starts the new build.</summary>
+    private const string InstallArguments =
+        "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /CLOSEAPPLICATIONS";
 
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromMinutes(10) };
 
@@ -94,15 +105,15 @@ public static class Updater
         };
     }
 
-    /// <summary>Download the new build, hand it to a detached helper that
-    /// replaces the running executable once this process exits and relaunches
-    /// it. The caller is expected to shut the app down right after this
-    /// returns.</summary>
-    public static async Task InstallUpdateAsync(UpdateInfo info, string appExePath)
+    /// <summary>Download the release's installer and hand it to Windows, which
+    /// elevates it; the setup upgrades the install in place and relaunches the
+    /// app through its postinstall run entry. The caller is expected to shut the
+    /// app down right after this returns.</summary>
+    public static async Task InstallUpdateAsync(UpdateInfo info)
     {
         string dir = Path.Combine(Path.GetTempPath(), "jockey-studio-update");
         Directory.CreateDirectory(dir);
-        string staged = Path.Combine(dir, "JockeyStudio.exe");
+        string staged = Path.Combine(dir, "JockeyStudio-setup.exe");
 
         using (var response = await Client.GetAsync(info.DownloadUrl).ConfigureAwait(false))
         {
@@ -111,29 +122,12 @@ public static class Updater
             await response.Content.CopyToAsync(fs).ConfigureAwait(false);
         }
 
-        string script = Path.Combine(dir, "run-update.cmd");
-        string scriptText =
-            "@echo off\r\n" +
-            $"set src=\"{staged}\"\r\n" +
-            $"set dst=\"{appExePath}\"\r\n" +
-            "set tries=0\r\n" +
-            ":loop\r\n" +
-            "ping -n 2 127.0.0.1 >nul\r\n" +
-            "copy /y \"%src%\" \"%dst%\" >nul 2>&1\r\n" +
-            "if not errorlevel 1 goto done\r\n" +
-            "set /a tries+=1\r\n" +
-            "if %tries% lss 45 goto loop\r\n" +
-            "exit /b 1\r\n" +
-            ":done\r\n" +
-            "del \"%src%\" >nul 2>&1\r\n" +
-            "start \"\" \"%dst%\"\r\n";
-        File.WriteAllText(script, scriptText);
-
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd")
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(staged)
         {
-            Arguments = $"/c \"{script}\"",
-            UseShellExecute = false,
-            CreateNoWindow = true,
+            Arguments = InstallArguments,
+            // ShellExecute is required for the UAC elevation prompt: a
+            // CreateProcess launch of an elevated image fails outright.
+            UseShellExecute = true,
         });
     }
 

@@ -22,21 +22,34 @@ public static class ChangeLog
     /// "What's new" page. Kept separate from the versioned history because it
     /// describes the in-development behavior of this build, not a shipped
     /// release.</summary>
-    public const string LatestTitle = "Scroll-wheel volume control and a proper app icon";
+    public const string LatestTitle = "A real Windows installer, and auto-update that works";
 
     /// <summary>Explanation of the current build's headline change (moved here
     /// from the About page).</summary>
     public const string LatestSummary =
-        "0.2.1 polishes the WPF rewrite: the mouse wheel over a deck's volume fader now " +
-        "nudges its level so you can set it without dragging, the Jockey Studio icon is " +
-        "embedded in the executable and shown in the window, Settings and About, and " +
-        "release assets are now named without spaces so the in-app updater can fetch " +
-        "them reliably. Settings and state moved to the com.jockeystudio.app folder.";
+        "Jockey Studio installs itself again. Releases ship a JockeyStudio_<version>_x64-setup.exe " +
+        "that puts the app in Program Files with a Start Menu shortcut and an Add/Remove Programs " +
+        "entry, and the in-app updater now runs that installer instead of copying an executable " +
+        "over itself — which used to fail silently whenever the app's path contained a space, " +
+        "leaving the update prompt to reappear on every launch.";
 
     /// <summary>Versioned history, newest first. Sync source: CHANGELOG.md (the
     /// release notes published to GitHub and shown by the updater dialog).</summary>
     public static IReadOnlyList<ChangeLogEntry> Versions { get; } = new[]
     {
+        new ChangeLogEntry
+        {
+            Version = "0.2.2",
+            Title = "A real Windows installer, and auto-update that works",
+            Date = "2026-09-27",
+            Items = new[]
+            {
+                "Windows installer — releases now ship JockeyStudio_<version>_x64-setup.exe (Inno Setup) instead of a bare executable. It installs to C:\\Program Files\\Jockey Studio for all users, adds a Start Menu shortcut (plus an optional desktop shortcut) and an Add/Remove Programs entry, and installs over an existing copy. Installing and updating both ask for UAC approval.",
+                "Auto-update fixed — 0.2.0 and 0.2.1 updated by copying the new executable over the running one from a generated .cmd. The copy failed silently whenever the app's path contained a space, so the update never landed and the update prompt came back on every launch. Updates now download the installer, hand it to Windows, and let it upgrade the install and relaunch the app.",
+                "Safer update payload — the updater now only accepts a -setup.exe release asset, so a portable build or any other .exe on a release can no longer be mistaken for the installer and copied over the running app.",
+                "CI guards — the release workflow now fails if the built setup's filename does not match the tag being released, or if the changelog has no section for that version.",
+            },
+        },
         new ChangeLogEntry
         {
             Version = "0.2.1",

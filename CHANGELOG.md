@@ -2,6 +2,17 @@
 
 All notable changes to Jockey Studio are documented here. Releases are published to GitHub, and the updater dialog shows each release's notes fetched from GitHub.
 
+## 0.2.2 — 2026-09-27
+
+The app is installed again, and the update loop that came with the portable build is fixed.
+
+- **Windows installer** — releases now ship `JockeyStudio_<version>_x64-setup.exe` (Inno Setup) instead of a bare executable. It installs to `C:\Program Files\Jockey Studio` for all users, adds a Start Menu shortcut (plus an optional desktop shortcut) and an Add/Remove Programs entry, and installs over an existing copy. Installing and updating both ask for UAC approval.
+- **Auto-update fixed** — 0.2.0 and 0.2.1 updated by copying the new executable over the running one from a generated `.cmd`. The copy failed silently whenever the app's path contained a space, so the update never landed and the update prompt came back on every launch. Updates now download the installer, hand it to Windows, and let it upgrade the install and relaunch the app.
+- **Safer update payload** — the updater now only accepts a `-setup.exe` release asset, so a portable build or any other `.exe` on a release can no longer be mistaken for the installer and copied over the running app.
+- **CI guards** — the release workflow now fails if the built setup's filename does not match the tag being released, or if `CHANGELOG.md` has no section for that version.
+
+**To get 0.2.2**, download `JockeyStudio_0.2.2_x64-setup.exe` from the releases page and run it. Version 0.2.0 and 0.2.1 cannot update themselves from a path containing a space, so this one release has to be installed by hand; in-app updates work from then on. The portable `.exe` still runs fine if you prefer it, but only the installed copy can update itself.
+
 ## 0.2.1 — 2026-09-27
 
 Polish and packaging follow-ups to the 0.2.0 WPF rewrite.

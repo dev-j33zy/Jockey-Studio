@@ -656,8 +656,9 @@ public partial class MainWindow : Window
         if (_aboutWindow != null) _aboutWindow.SetUpdateStatus(text);
     }
 
-    /// <summary>Download and run the new installer via a detached helper, then
-    /// shut the app down (1:1 of the React store.installUpdate/update.rs).</summary>
+    /// <summary>Download the release's installer, let it upgrade the install in
+    /// place (it raises UAC and relaunches the new build), then shut this one
+    /// down (1:1 of the React store.installUpdate/update.rs).</summary>
     private async Task InstallUpdateAsync()
     {
         var info = _updateInfo;
@@ -665,9 +666,7 @@ public partial class MainWindow : Window
         UpdateDialog.SetInstalling(true);
         try
         {
-            string exe = Environment.ProcessPath
-                ?? System.IO.Path.Combine(AppContext.BaseDirectory, "JockeyStudio.exe");
-            await Updater.InstallUpdateAsync(info, exe);
+            await Updater.InstallUpdateAsync(info);
             Application.Current.Shutdown();
         }
         catch

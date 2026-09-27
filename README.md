@@ -20,21 +20,29 @@ Multi-deck audio mixing workstation for Windows, built with **.NET 8 / WPF** and
 
 ## Installation
 
-Grab the latest release from the [GitHub releases page](https://github.com/dev-j33zy/Jockey-Studio/releases) and run `JockeyStudio_<version>_x64.exe`. It is a self-contained, single-file `.exe` — no runtime install needed.
+Grab `JockeyStudio_<version>_x64-setup.exe` from the [GitHub releases page](https://github.com/dev-j33zy/Jockey-Studio/releases) and run it. The setup installs Jockey Studio to `C:\Program Files\Jockey Studio` for every user on the machine, adds a Start Menu shortcut (and, if you tick the box, a desktop shortcut) and an Add/Remove Programs entry you can uninstall from. It asks for UAC approval, and running it again over an existing install upgrades it in place.
+
+The app itself is a self-contained single-file `.exe` carrying its own .NET 8 runtime, so the installed copy runs on any Windows 10/11 (x64) machine with nothing else to install.
+
+A portable copy still works — grab the `JockeyStudio_<version>_x64.exe` build and run it from anywhere — but **only the installed copy can update itself**, because an in-place update needs write access to its own folder. A portable build still detects new releases; installing from that prompt is how you move to the installed version.
 
 ### Building the installer yourself
+
+Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) and [Inno Setup 6](https://jrsoftware.org/isdl.php):
 
 ```
 dotnet publish src-wpf\JockeyStudio.Wpf\JockeyStudio.Wpf.csproj -c Release -r win-x64 `
   --self-contained true -p:PublishSingleFile=true `
-  -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
+  -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
+  -p:DebugType=None -p:DebugSymbols=false -o publish_out
+iscc /DAppVersion=0.2.2 /DPublishDir=publish_out /DOutputDir=artifacts installer\jockeystudio.iss
 ```
 
-The single-file `JockeyStudio.exe` lands in the project's `bin\Release\net8.0-windows\win-x64\publish\` output. A self-contained build carries its own .NET 8 runtime, so it runs on any Windows 10/11 (x64) machine.
+The setup lands in `artifacts\`. `installer/jockeystudio.iss` is the single source of truth for the install layout, shortcuts and the installer name the updater looks for.
 
 ### Releases (CI)
 
-Every `v*` tag triggers `.github/workflows/build.yml`, which publishes the Windows build on GitHub Actions and attaches `JockeyStudio_<version>_x64.exe` to the matching release with its `CHANGELOG.md` section as the notes. That exe asset is exactly what the in-app updater downloads — the release and its asset are the app's update feed.
+Every `v*` tag triggers `.github/workflows/build.yml`, which publishes the Windows build on GitHub Actions and attaches `JockeyStudio_<version>_x64-setup.exe` to the matching release with its `CHANGELOG.md` section as the notes. That setup is exactly what the in-app updater downloads — the release and its asset are the app's update feed.
 
 ### Upgrading a machine that ran the 0.1.x (Tauri/Rust) builds
 

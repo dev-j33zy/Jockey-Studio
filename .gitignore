@@ -1,6 +1,8 @@
 bin/
 obj/
 installers/
+artifacts/
+publish_out/
 *.exe
 *.log
 .DS_Store

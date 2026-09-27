@@ -29,11 +29,27 @@ jobs:
             -p:DebugType=None -p:DebugSymbols=false `
             -o publish_out
 
+      - name: Build the Windows installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $ver = (Select-String -Path src-wpf/JockeyStudio.Wpf/JockeyStudio.Wpf.csproj -Pattern '<Version>(.+?)</Version>').Matches.Groups[1].Value
+          $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "${env:ProgramFiles}\Inno Setup 6\ISCC.exe") |
+            Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) { throw "ISCC.exe not found" }
+          & $iscc "/DAppVersion=$ver" "/DPublishDir=publish_out" "/DOutputDir=artifacts" installer/jockeystudio.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
+          # Portable build alongside the setup, for anyone who prefers not to install.
+          # The 0.2.2+ updater only ever picks the -setup.exe asset; 0.2.0/0.2.1
+          # predate that and may copy either one over themselves.
+          Copy-Item publish_out/JockeyStudio.exe "artifacts/JockeyStudio_${ver}_x64.exe"
+          Get-ChildItem artifacts
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: jockey-studio-windows
-          path: publish_out/*.exe
+          path: artifacts/*.exe
 
   release:
     name: Publish release
@@ -51,16 +67,28 @@ jobs:
           merge-multiple: true
           path: publish_out
 
-      - name: Prepare asset name and release notes
+      - name: Prepare release notes
         shell: bash
         run: |
           VER="${GITHUB_REF_NAME#v}"
-          mv publish_out/JockeyStudio.exe "publish_out/JockeyStudio_${VER}_x64.exe"
+          # Inno Setup already named the setup JockeyStudio_${VER}_x64-setup.exe
+          # from the csproj <Version>; fail loudly rather than publish a build
+          # that does not match the tag being released.
+          ASSET="JockeyStudio_${VER}_x64-setup.exe"
+          if [ ! -f "publish_out/$ASSET" ]; then
+            echo "expected $ASSET in the artifact, found:" >&2
+            ls -l publish_out >&2
+            exit 1
+          fi
           awk -v v="$VER" '
             $0 ~ ("^## " v " ") {on=1; print; next}
             on && /^## / {exit}
             on {print}
           ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "no CHANGELOG.md section for $VER" >&2
+            exit 1
+          fi
           echo "RELEASE_NAME=Jockey Studio $VER" >> "$GITHUB_ENV"
 
       - name: Publish release
