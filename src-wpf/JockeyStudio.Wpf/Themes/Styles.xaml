@@ -461,6 +461,10 @@
   <Style x:Key="FillSliderH" TargetType="Slider">
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
     <Setter Property="Height" Value="26"/>
+    <!-- Click the bar to jump to that point. Without it the track's
+         RepeatButtons (Slider.Increase/DecreaseLarge) only nudge the value by
+         LargeChange, so clicking a slider did nothing useful. -->
+    <Setter Property="IsMoveToPointEnabled" Value="True"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
     <Setter Property="Cursor" Value="Hand"/>
     <Setter Property="FocusVisualStyle" Value="{x:Null}"/>

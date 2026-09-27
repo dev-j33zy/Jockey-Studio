@@ -251,6 +251,7 @@ public partial class TileCardControl : UserControl
         UpdateStatusUi();
         UpdateMuteUi();
         ApplyLoopMode();
+        UpdateVolumeTooltip();
         Seek.PreviewMouseMove += Seek_PreviewMouseMove;
         Seek.MouseLeave += Seek_MouseLeave;
         Seek.ValueChanged += Seek_ValueChanged;
@@ -334,6 +335,7 @@ public partial class TileCardControl : UserControl
             DevBtn.ToolTip = _deck.DeviceId == EngineConst.DEFAULT_DEVICE_ID
                 ? $"Output: Default ({_defaultDeviceLabel})"
                 : $"Output: {_deck.DeviceId}";
+            UpdateVolumeTooltip();
 
             UpdateStatusUi();
             UpdateMuteUi();
@@ -426,6 +428,7 @@ public partial class TileCardControl : UserControl
         Ctl.SetIsPopupOpen(VolBtn, false);
         Ctl.SetIsPopupOpen(DevBtn, false);
         Ctl.SetIsPopupOpen(LoopBtn, false);
+        UpdateVolumeTooltip();
     }
 
     public void CloseAllPopups() => ClosePopups();
@@ -457,6 +460,16 @@ public partial class TileCardControl : UserControl
                 Ctl.SetIsPopupOpen(LoopBtn, true);
                 break;
         }
+        UpdateVolumeTooltip();
+    }
+
+    /// <summary>Hover text for the volume button: the level the deck is playing
+    /// at, matching the readout in the volume modal. Suppressed while that modal
+    /// is open, where the level is already on screen.</summary>
+    private void UpdateVolumeTooltip()
+    {
+        ToolTipService.SetIsEnabled(VolBtn, _openPopup != "vol");
+        VolBtn.ToolTip = $"Volume: {(int)Math.Round(EffectiveVolume * 100.0)}%";
     }
 
     // Clicking any modal's toggle button closes every open modal across all
