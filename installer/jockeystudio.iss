@@ -56,12 +56,39 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+[InstallDelete]
+; The 0.1.x (Tauri/Rust) app was a separate per-user product with its own
+; install folder, shortcuts and Programs entry, under a different identifier.
+; It shares no AppId with this installer, so an update cannot supersede it: both
+; Start Menu entries coexist and the stale one keeps launching the old app.
+; Clear those leftovers so an update from 0.1.x leaves one shortcut and one
+; Programs entry behind. This runs as the first step of installation, before
+; [Icons], so the shortcuts below are still created afterwards.
+; Deliberately not deleted: {userappdata}\com.jockeystudio.app\ - this app's
+; own settings folder, under the current identifier rather than the 0.1.x one
+; above - and %TEMP%\jockey-studio-update\, which the in-app updater uses to
+; stage this very setup.
+Type: filesandordirs; Name: "{localappdata}\Jockey Studio"
+Type: filesandordirs; Name: "{localappdata}\Programs\Jockey Studio"
+Type: filesandordirs; Name: "{localappdata}\com.cjaycapillo.jockeystudio"
+Type: filesandordirs; Name: "{userappdata}\com.cjaycapillo.jockeystudio"
+Type: files; Name: "{userappdata}\Microsoft\Windows\Start Menu\Programs\Jockey Studio.lnk"
+Type: filesandordirs; Name: "{userappdata}\Microsoft\Windows\Start Menu\Programs\Jockey Studio"
+Type: files; Name: "{userdesktop}\Jockey Studio.lnk"
+
 [Files]
 Source: "{#PublishDir}\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
+
+[Registry]
+; The 0.1.x app's own Add/Remove Programs entry, filed under its old name and
+; identifier, which is what leaves a second "Jockey Studio" in that list. HKCU
+; resolves to the account running Setup, which is the account it was installed
+; for; the per-user entries in [InstallDelete] are scoped the same way.
+Root: HKCU; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Jockey Studio"; Flags: deletekey
 
 [Run]
 ; Relaunches the installed app after a manual install (the "Run Jockey Studio"

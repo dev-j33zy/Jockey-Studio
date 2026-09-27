@@ -46,23 +46,22 @@ Every `v*` tag triggers `.github/workflows/build.yml`, which publishes the Windo
 
 ### Upgrading a machine that ran the 0.1.x (Tauri/Rust) builds
 
-The old Rust app ships its own updater, so a machine that ran 0.1.x keeps its installed Rust copy alongside the new WPF app. If a launch re-opens the old version (it will re-offer the update on every run), clean the machine once, per user account:
+The old Rust app was a separate per-user product with its own install folder, shortcuts and Add/Remove Programs entry, and shares no AppId with this installer — so an update cannot supersede it, and a machine that ran 0.1.x ends up with two "Jockey Studio" entries, the stale one still launching the old app.
 
-Install the current release first (`JockeyStudio_<version>_x64-setup.exe`) — it puts the app in `C:\Program Files\Jockey Studio` with its own shortcuts, so the old install's leftovers are then just clutter.
+Current releases clear those leftovers automatically: `installer/jockeystudio.iss` deletes the 0.1.x install folder, its Start Menu and desktop shortcuts, and its Programs entry as the first step of installing, so the shortcuts it creates a moment later are the only ones left. Install the current release (`JockeyStudio_<version>_x64-setup.exe`) once and the machine is clean. If the Start menu still shows a stale entry afterwards, or you are on 0.2.2 or older, do it by hand, per user account:
 
 In the old app folder — `%LOCALAPPDATA%\Jockey Studio\`, or `%LOCALAPPDATA%\Programs\Jockey Studio\` (occasionally on a non-system drive):
 
 - **Delete** the whole folder: `jockey-studio.exe`, `uninstall.exe`, `WebView2Loader.dll`, the `resources\` folder, `unins000.exe` / `unins000.dat`. The Rust app's shortcut pointed here, so repoint or remove the old Start Menu / desktop shortcut.
-
-Also delete:
-
-- `%TEMP%\jockey-studio-update\` — stale updater payload (`jockey-studio-setup.exe`, `run-update.cmd`).
+- `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Jockey Studio.lnk` and any desktop `Jockey Studio.lnk` — the old shortcuts.
+- The old Programs entry: `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Jockey Studio`, which is what keeps a second "Jockey Studio" in Add/Remove Programs.
 - `%LOCALAPPDATA%\com.cjaycapillo.jockeystudio\` and `%APPDATA%\com.cjaycapillo.jockeystudio\` — data folders from older builds that used the old bundle identifier (present only if such a build ran on the machine).
 - Old `Downloads\Jockey.Studio_0.1.x_x64-setup.exe` installers, and any portable `JockeyStudio_*.exe` left in Downloads, if any.
 
 **Keep** (do not delete):
 
 - `%APPDATA%\com.jockeystudio.app\` — the app's settings/state folder (current bundle identifier), shared by the installed and portable copies.
+- `%TEMP%\jockey-studio-update\` — the current updater's staging folder. The Rust builds used the same name, so it can hold leftovers, but the in-app updater stages the setup it is running there too, so clear it between runs at most rather than during one.
 
 ## Auto-update
 
