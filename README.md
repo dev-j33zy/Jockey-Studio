@@ -48,27 +48,28 @@ Every `v*` tag triggers `.github/workflows/build.yml`, which publishes the Windo
 
 The old Rust app ships its own updater, so a machine that ran 0.1.x keeps its installed Rust copy alongside the new WPF app. If a launch re-opens the old version (it will re-offer the update on every run), clean the machine once, per user account:
 
-In the app folder — `%LOCALAPPDATA%\Jockey Studio\`, or `%LOCALAPPDATA%\Programs\Jockey Studio\` (occasionally on a non-system drive):
+Install the current release first (`JockeyStudio_<version>_x64-setup.exe`) — it puts the app in `C:\Program Files\Jockey Studio` with its own shortcuts, so the old install's leftovers are then just clutter.
 
-- **Replace** `jockey-studio.exe` with the current release `.exe` — keep this file, not delete: it keeps the shortcut and the in-place updater working.
-- **Delete** the Rust-only files: `uninstall.exe`, `WebView2Loader.dll`, the `resources\` folder, `unins000.exe` / `unins000.dat`.
+In the old app folder — `%LOCALAPPDATA%\Jockey Studio\`, or `%LOCALAPPDATA%\Programs\Jockey Studio\` (occasionally on a non-system drive):
+
+- **Delete** the whole folder: `jockey-studio.exe`, `uninstall.exe`, `WebView2Loader.dll`, the `resources\` folder, `unins000.exe` / `unins000.dat`. The Rust app's shortcut pointed here, so repoint or remove the old Start Menu / desktop shortcut.
 
 Also delete:
 
 - `%TEMP%\jockey-studio-update\` — stale updater payload (`jockey-studio-setup.exe`, `run-update.cmd`).
 - `%LOCALAPPDATA%\com.cjaycapillo.jockeystudio\` and `%APPDATA%\com.cjaycapillo.jockeystudio\` — data folders from older builds that used the old bundle identifier (present only if such a build ran on the machine).
-- Old `Downloads\Jockey.Studio_0.1.x_x64-setup.exe` installers, if any.
+- Old `Downloads\Jockey.Studio_0.1.x_x64-setup.exe` installers, and any portable `JockeyStudio_*.exe` left in Downloads, if any.
 
 **Keep** (do not delete):
 
-- `%APPDATA%\com.jockeystudio.app\` — the app's settings/state folder (current bundle identifier).
-- Start Menu / desktop shortcuts — repoint them if you moved the app folder, otherwise they keep working.
+- `%APPDATA%\com.jockeystudio.app\` — the app's settings/state folder (current bundle identifier), shared by the installed and portable copies.
 
 ## Auto-update
 
 - Updates are fetched from `https://github.com/dev-j33zy/Jockey-Studio/releases/latest`.
-- Version tags are compared with semver (a leading `v` is stripped). The update package is the first release asset ending in `.exe` (the self-contained single-file build).
-- Flow: silent check on launch → bottom-right bubble → updater dialog with the release notes → **Install Now** downloads the new `.exe`, closes the app, replaces the running executable and relaunches.
+- Version tags are compared with semver (a leading `v` is stripped). The update package is the release's `-setup.exe` asset — the Inno Setup installer, matched by that suffix so the portable `.exe` on the same release can never be mistaken for it.
+- Flow: silent check on launch → bottom-right bubble → updater dialog with the release notes → **Install Now** downloads the installer, hands it to Windows (UAC), the app closes, and the setup upgrades the install in place and relaunches it.
+- The app must be installed, not run as a portable copy: the app is in Program Files, so the update is a reinstall, which needs elevation. A portable build still detects releases, and installing from that prompt is how you move to the installed version.
 - Manual check: **Help → Check for Updates**, or **Help → About → Updates** tab.
 
 ## Development
@@ -89,6 +90,7 @@ src-wpf/
     Engine/                   deck player (WASAPI), auto-mix, looping, device library, updater, persistence
     Helpers/                  app preferences, theme manager
     Themes/                   colors (dark/light) and control styles
+installer/jockeystudio.iss   Inno Setup script: install layout, shortcuts, installer name
 .github/workflows/            CI: publish + attach release assets on v* tags
 CHANGELOG.md                  release notes
 ```
