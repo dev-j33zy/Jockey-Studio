@@ -22,22 +22,35 @@ public static class ChangeLog
     /// "What's new" page. Kept separate from the versioned history because it
     /// describes the in-development behavior of this build, not a shipped
     /// release.</summary>
-    public const string LatestTitle = "A native WPF rewrite of Jockey Studio";
+    public const string LatestTitle = "Scroll-wheel volume control and a proper app icon";
 
     /// <summary>Explanation of the current build's headline change (moved here
     /// from the About page).</summary>
     public const string LatestSummary =
-        "Jockey Studio has been rewritten as a native Windows app on .NET 8 and WPF, " +
-        "replacing the Tauri/React/Rust engine — no webview, lower overhead, same mixer. " +
-        "All decks, devices, playlists and auto-mix behavior carry over, with a refreshed " +
-        "top bar, a media library drawer, menu-driven Settings/About/Updates windows, live " +
-        "loop switching while playing, and cleaner modal (loop, volume, output device) " +
-        "click handling.";
+        "0.2.1 polishes the WPF rewrite: the mouse wheel over a deck's volume fader now " +
+        "nudges its level so you can set it without dragging, the Jockey Studio icon is " +
+        "embedded in the executable and shown in the window, Settings and About, and " +
+        "release assets are now named without spaces so the in-app updater can fetch " +
+        "them reliably. Settings and state moved to the com.jockeystudio.app folder.";
 
     /// <summary>Versioned history, newest first. Sync source: CHANGELOG.md (the
     /// release notes published to GitHub and shown by the updater dialog).</summary>
     public static IReadOnlyList<ChangeLogEntry> Versions { get; } = new[]
     {
+        new ChangeLogEntry
+        {
+            Version = "0.2.1",
+            Title = "Scroll-wheel volume control, app icon and automated releases",
+            Date = "2026-09-27",
+            Items = new[]
+            {
+                "Mouse-wheel volume faders — the mouse wheel over a deck's volume fader now nudges its level (wheel up raises), so a fader can be set without dragging; the wheel no longer scrolls whatever is behind the fader.",
+                "App icon — the Jockey Studio icon is now embedded in the executable and shown in the window, Settings and About, replacing the default WPF icon.",
+                "Space-free release asset — the published installer is JockeyStudio_<version>_x64.exe (no spaces), which is what CI names the asset and what the in-app updater expects.",
+                "Automated releases — pushing a v* tag now builds the self-contained executable and publishes it to GitHub Releases with the matching section of the changelog as its release notes.",
+                "App identifier — settings and state now live under com.jockeystudio.app. Installs that were on com.cjaycapillo.jockeystudio start with default settings; see the README for the old folder's paths.",
+            },
+        },
         new ChangeLogEntry
         {
             Version = "0.2.0",

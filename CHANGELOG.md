@@ -2,6 +2,17 @@
 
 All notable changes to Jockey Studio are documented here. Releases are published to GitHub, and the updater dialog shows each release's notes fetched from GitHub.
 
+## 0.2.1 — 2026-09-27
+
+Polish and packaging follow-ups to the 0.2.0 WPF rewrite.
+
+- **Mouse-wheel volume faders** — the mouse wheel over a deck's volume fader now nudges its level (wheel up raises), so a fader can be set without dragging it; the wheel no longer scrolls whatever is behind the fader.
+- **App icon** — the Jockey Studio icon is now embedded in the executable and shown in the window, Settings and About, replacing the default WPF icon.
+- **Space-free release asset** — the published installer is `JockeyStudio_<version>_x64.exe` (no spaces), which is what CI names the asset and what the in-app updater expects.
+- **Automated releases** — pushing a `v*` tag now builds the self-contained executable and publishes it to GitHub Releases with the matching section of this file as its release notes; installers are no longer tracked in the repository.
+- **App identifier** — settings and state now live under `com.jockeystudio.app`. **Note:** installs that were on `com.cjaycapillo.jockeystudio` start with default settings; the old folder can be deleted once the new layout looks right (see the README for paths).
+- **README** — corrected copyright and the cleanup steps for machines still carrying a 0.1.x Tauri/Rust install.
+
 ## 0.2.0 — 2026-09-24
 
 Native WPF rewrite (Windows).
