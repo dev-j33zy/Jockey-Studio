@@ -5,7 +5,7 @@
 ;     --self-contained true -p:PublishSingleFile=true ^
 ;     -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true ^
 ;     -p:DebugType=None -p:DebugSymbols=false -o publish_out
-;   iscc /DAppVersion=0.2.2 installer\jockeystudio.iss
+;   iscc /DAppVersion=0.2.3 installer\jockeystudio.iss
 ;
 ; CI (.github/workflows/build.yml) runs both steps on a v* tag and attaches the
 ; resulting setup to the release; it is also the payload the in-app updater
@@ -16,7 +16,7 @@
 #define AppPublisher "dev-j33zy"
 
 #ifndef AppVersion
-  #define AppVersion "0.2.2"
+  #define AppVersion "0.2.3"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\publish_out"
@@ -56,26 +56,6 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
-[InstallDelete]
-; The 0.1.x (Tauri/Rust) app was a separate per-user product with its own
-; install folder, shortcuts and Programs entry, under a different identifier.
-; It shares no AppId with this installer, so an update cannot supersede it: both
-; Start Menu entries coexist and the stale one keeps launching the old app.
-; Clear those leftovers so an update from 0.1.x leaves one shortcut and one
-; Programs entry behind. This runs as the first step of installation, before
-; [Icons], so the shortcuts below are still created afterwards.
-; Deliberately not deleted: {userappdata}\com.jockeystudio.app\ - this app's
-; own settings folder, under the current identifier rather than the 0.1.x one
-; above - and %TEMP%\jockey-studio-update\, which the in-app updater uses to
-; stage this very setup.
-Type: filesandordirs; Name: "{localappdata}\Jockey Studio"
-Type: filesandordirs; Name: "{localappdata}\Programs\Jockey Studio"
-Type: filesandordirs; Name: "{localappdata}\com.cjaycapillo.jockeystudio"
-Type: filesandordirs; Name: "{userappdata}\com.cjaycapillo.jockeystudio"
-Type: files; Name: "{userappdata}\Microsoft\Windows\Start Menu\Programs\Jockey Studio.lnk"
-Type: filesandordirs; Name: "{userappdata}\Microsoft\Windows\Start Menu\Programs\Jockey Studio"
-Type: files; Name: "{userdesktop}\Jockey Studio.lnk"
-
 [Files]
 Source: "{#PublishDir}\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -83,16 +63,93 @@ Source: "{#PublishDir}\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
 
-[Registry]
-; The 0.1.x app's own Add/Remove Programs entry, filed under its old name and
-; identifier, which is what leaves a second "Jockey Studio" in that list. HKCU
-; resolves to the account running Setup, which is the account it was installed
-; for; the per-user entries in [InstallDelete] are scoped the same way.
-Root: HKCU; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Jockey Studio"; Flags: deletekey
-
 [Run]
 ; Relaunches the installed app after a manual install (the "Run Jockey Studio"
 ; finish-page checkbox) and after a silent in-app update. Intentionally no
 ; skipifsilent: the updater launches this setup with /VERYSILENT and relies on
 ; this entry to bring the (newly installed) app back up.
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; WorkingDir: "{app}"; Flags: nowait postinstall
+
+[Code]
+// The 0.1.x (Tauri/Rust) app was a separate per-user product: its own install
+// folder, Start Menu and desktop shortcuts, and Add/Remove Programs entry, filed
+// under a different identifier. It shares no AppId with this installer, so an
+// update cannot supersede it - a machine that ran 0.1.x keeps a second "Jockey
+// Studio" in the Start menu and in Programs, and the stale per-user shortcut is
+// the one that wins, so clicking it launches the old app even though the update
+// itself succeeded.
+//
+// 0.1.x installed per user, so every account that ran it has its own leftovers
+// and only the account running Setup can be reached with {localappdata} and
+// HKCU. Walk the machine's profiles instead, so one install clears every account
+// however many are signed up on it.
+
+procedure RemoveLegacyApp(const ProfileDir, Sid: String);
+var
+  Dir, Local, Roaming, Programs, Desktop: String;
+begin
+  if ProfileDir = '' then
+    Exit;
+
+  // ProfileImagePath carries no trailing separator, but tolerate one so the
+  // paths below cannot come out malformed.
+  Dir := ProfileDir;
+  if (Length(Dir) > 0) and (Copy(Dir, Length(Dir), 1) = '\') then
+    Delete(Dir, Length(Dir), 1);
+  if Dir = '' then
+    Exit;
+
+  Local    := Dir + '\AppData\Local';
+  Roaming  := Dir + '\AppData\Roaming';
+  Programs := Roaming + '\Microsoft\Windows\Start Menu\Programs';
+  Desktop  := Dir + '\Desktop';
+
+  // The app itself and the data folders older builds wrote under the old bundle
+  // identifier. Never touches com.jockeystudio.app, this app's own settings.
+  DelTree(Local + '\Jockey Studio', True, True, True);
+  DelTree(Local + '\Programs\Jockey Studio', True, True, True);
+  DelTree(Local + '\com.cjaycapillo.jockeystudio', True, True, True);
+  DelTree(Roaming + '\com.cjaycapillo.jockeystudio', True, True, True);
+
+  // The old shortcuts. The Start Menu one is what keeps launching 0.1.x after
+  // an otherwise successful update.
+  DeleteFile(Programs + '\Jockey Studio.lnk');
+  DelTree(Programs + '\Jockey Studio', True, True, True);
+  DeleteFile(Desktop + '\Jockey Studio.lnk');
+
+  // That account's Programs entry, filed under the old name and identifier.
+  // Windows only mounts a signed-in account's hive, so this reaches whoever is
+  // in a session now; a logged-off account keeps an inert entry until it next
+  // signs in, and the app it points at has just been deleted anyway.
+  if Sid <> '' then
+    RegDeleteKeyIncludingSubkeys(HKU, Sid + '\Software\Microsoft\Windows\CurrentVersion\Uninstall\Jockey Studio');
+end;
+
+procedure RemoveLegacyInstalls;
+var
+  Sids: TArrayOfString;
+  ProfileKey, Image: String;
+  I: Integer;
+begin
+  // ProfileList is the machine's list of profiles, one key per account.
+  ProfileKey := 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList';
+  if not RegGetSubkeyNames(HKLM, ProfileKey, Sids) then
+    Exit;
+
+  for I := 0 to GetArrayLength(Sids) - 1 do
+  begin
+    Image := '';
+    if RegQueryStringValue(HKLM, ProfileKey + '\' + Sids[I], 'ProfileImagePath', Image) then
+      RemoveLegacyApp(ExpandConstant(Image), Sids[I]);
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  // Runs after this install's own files, shortcuts and Programs entry are in
+  // place, so it only ever removes what the 0.1.x build left behind. Also skips
+  // %TEMP%\jockey-studio-update\, which is not a 0.1.x leftover but the staging
+  // folder for the very setup the in-app updater is running here.
+  if CurStep = ssPostInstall then
+    RemoveLegacyInstalls;
+end;

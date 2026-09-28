@@ -35,7 +35,7 @@ dotnet publish src-wpf\JockeyStudio.Wpf\JockeyStudio.Wpf.csproj -c Release -r wi
   --self-contained true -p:PublishSingleFile=true `
   -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
   -p:DebugType=None -p:DebugSymbols=false -o publish_out
-iscc /DAppVersion=0.2.2 /DPublishDir=publish_out /DOutputDir=artifacts installer\jockeystudio.iss
+iscc /DAppVersion=0.2.3 /DPublishDir=publish_out /DOutputDir=artifacts installer\jockeystudio.iss
 ```
 
 The setup lands in `artifacts\`. `installer/jockeystudio.iss` is the single source of truth for the install layout, shortcuts and the installer name the updater looks for.
@@ -48,7 +48,7 @@ Every `v*` tag triggers `.github/workflows/build.yml`, which publishes the Windo
 
 The old Rust app was a separate per-user product with its own install folder, shortcuts and Add/Remove Programs entry, and shares no AppId with this installer — so an update cannot supersede it, and a machine that ran 0.1.x ends up with two "Jockey Studio" entries, the stale one still launching the old app.
 
-Current releases clear those leftovers automatically: `installer/jockeystudio.iss` deletes the 0.1.x install folder, its Start Menu and desktop shortcuts, and its Programs entry as the first step of installing, so the shortcuts it creates a moment later are the only ones left. Install the current release (`JockeyStudio_<version>_x64-setup.exe`) once and the machine is clean. If the Start menu still shows a stale entry afterwards, or you are on 0.2.2 or older, do it by hand, per user account:
+Current releases clear those leftovers automatically: once the install has laid down its own files and shortcuts, `installer/jockeystudio.iss` walks the machine's profiles and removes the 0.1.x install folder, shortcuts and Programs entry from every account, so the shortcuts it just created are the only ones left. Install the current release (`JockeyStudio_<version>_x64-setup.exe`) once and the machine is clean. Two cases it cannot reach, and what to do about them: a logged-off account keeps an inert Programs entry (it points at an app that is now deleted) until it next signs in, and on 0.2.2 or older the cleanup does not run at all — in that case do it by hand, per user account:
 
 In the old app folder — `%LOCALAPPDATA%\Jockey Studio\`, or `%LOCALAPPDATA%\Programs\Jockey Studio\` (occasionally on a non-system drive):
 

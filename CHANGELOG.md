@@ -2,6 +2,14 @@
 
 All notable changes to Jockey Studio are documented here. Releases are published to GitHub, and the updater dialog shows each release's notes fetched from GitHub.
 
+## 0.2.3 — 2026-09-28
+
+Sliders respond where you click, the volume button says what it is set to, and an update clears out the old 0.1.x app so the shortcuts point at this one.
+
+- **Click a slider to jump to that point** — clicking the bar used to nudge the value by one `LargeChange` step, because the track is drawn as two transparent `RepeatButton`s bound to `Slider.Increase`/`DecreaseLarge`. This now works on the seek bar, all five auto-mix and fade sliders in Settings, and the volume fader.
+- **Volume level on hover** — the volume button reports the level its deck is playing at, and stops doing so while the volume modal is open, where the level is already on screen.
+- **Updates clear the 0.1.x app** — the old Tauri build was a separate per-user product with its own install folder, shortcuts and Programs entry, and it shares no AppId with this installer, so an update could never supersede it. A machine that ran 0.1.x was left with two "Jockey Studio" entries in the Start menu and in Add/Remove Programs, and the stale one kept launching the old app even after a successful update. Installing any current release now removes those leftovers for every account on the machine, so one install leaves one shortcut and one Programs entry. Your settings and deck data are untouched.
+
 ## 0.2.2 — 2026-09-27
 
 The app is installed again, and the update loop that came with the portable build is fixed.
