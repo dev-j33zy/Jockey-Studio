@@ -31,7 +31,19 @@ public sealed class AppState
     /// ignore it there, and old state files simply default it to empty.</summary>
     public string UpdateDismissedVersion { get; set; } = "";
 
-    public bool HasData => Tiles.Count > 0 || Media.Count > 0;
+    public bool HasData => Tiles.Count > 0 || Media.Count > 0 || !string.IsNullOrEmpty(UpdateDismissedVersion) || !IsDefaultSettings(Settings);
+
+    private static bool IsDefaultSettings(EngineSettings s)
+    {
+        var defaultSettings = new EngineSettings();
+        return s.AutoMixEnabled == defaultSettings.AutoMixEnabled
+            && s.AutoMixDb == defaultSettings.AutoMixDb
+            && s.AutoMixAttackMs == defaultSettings.AutoMixAttackMs
+            && s.AutoMixReleaseMs == defaultSettings.AutoMixReleaseMs
+            && s.DefaultFadeIn == defaultSettings.DefaultFadeIn
+            && s.DefaultFadeOut == defaultSettings.DefaultFadeOut
+            && string.Equals(s.DefaultDeviceId, defaultSettings.DefaultDeviceId, StringComparison.Ordinal);
+    }
 }
 
 /// <summary>App-state persistence (1:1 of src-tauri/src/storage.rs). Serialized
@@ -67,7 +79,8 @@ public static class StatePersistence
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
             string raw = File.ReadAllText(path);
             var state = JsonSerializer.Deserialize<AppState>(raw, Options);
-            return state is { HasData: true } ? state : null;
+            if (state == null) return null;
+            return IsMeaningfulState(state) ? state : null;
         }
         catch
         {
@@ -78,6 +91,28 @@ public static class StatePersistence
     /// <summary>Serialize the state to disk atomically. Never throws: a failed
     /// save must not take the running app down; the layout stays in memory.</summary>
     public static void Save(AppState state) => SaveTo(state, StatePath);
+
+    private static bool IsMeaningfulState(AppState state)
+    {
+        if (state.Tiles.Count > 0 || state.Media.Count > 0 || !string.IsNullOrEmpty(state.UpdateDismissedVersion))
+        {
+            return true;
+        }
+
+        var defaultSettings = new EngineSettings();
+        return !EqualsSettings(defaultSettings, state.Settings);
+    }
+
+    private static bool EqualsSettings(EngineSettings a, EngineSettings b)
+    {
+        return a.AutoMixEnabled == b.AutoMixEnabled
+            && a.AutoMixDb == b.AutoMixDb
+            && a.AutoMixAttackMs == b.AutoMixAttackMs
+            && a.AutoMixReleaseMs == b.AutoMixReleaseMs
+            && a.DefaultFadeIn == b.DefaultFadeIn
+            && a.DefaultFadeOut == b.DefaultFadeOut
+            && string.Equals(a.DefaultDeviceId, b.DefaultDeviceId, StringComparison.Ordinal);
+    }
 
     /// <summary>Canonical JSON of a state snapshot — cheap deterministic
     /// comparison for the Undo/Redo log (drop no-op entries).</summary>

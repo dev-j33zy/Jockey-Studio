@@ -2,6 +2,15 @@
 
 All notable changes to Jockey Studio are documented here. Releases are published to GitHub, and the updater dialog shows each release's notes fetched from GitHub.
 
+## 0.2.4 — 2026-10-07
+
+Seeking during playback now follows the most recent click, and update notifications compare versions strictly.
+
+- **More reliable seeking** — clicks made while the audio pipeline is restarting are remembered; playback resumes at the latest requested position instead of an earlier seek.
+- **Accurate update checks** — an update is offered only when both the installed and release versions parse as `major.minor.patch` and the release version is greater. The dialog labels the current and available versions.
+- **Robust slider values** — slider converters handle common numeric value types, not just `double`.
+- **Preserve settings-only state** — saved non-default settings remain restorable even when no decks or media are present; automix hold state is cleared during deck restoration.
+
 ## 0.2.3 — 2026-09-28
 
 Sliders respond where you click, the volume button says what it is set to, and an update clears out the old 0.1.x app so the shortcuts point at this one.

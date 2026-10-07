@@ -35,7 +35,7 @@ dotnet publish src-wpf\JockeyStudio.Wpf\JockeyStudio.Wpf.csproj -c Release -r wi
   --self-contained true -p:PublishSingleFile=true `
   -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
   -p:DebugType=None -p:DebugSymbols=false -o publish_out
-iscc /DAppVersion=0.2.3 /DPublishDir=publish_out /DOutputDir=artifacts installer\jockeystudio.iss
+iscc /DAppVersion=0.2.4 /DPublishDir=publish_out /DOutputDir=artifacts installer\jockeystudio.iss
 ```
 
 The setup lands in `artifacts\`. `installer/jockeystudio.iss` is the single source of truth for the install layout, shortcuts and the installer name the updater looks for.

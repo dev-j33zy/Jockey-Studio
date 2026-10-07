@@ -134,18 +134,21 @@ public static class Updater
     private static bool IsNewer(string latest, string current)
     {
         var (l, c) = (ParseVersion(latest), ParseVersion(current));
-        return (l != null && c != null) ? l > c : !string.Equals(latest, current, StringComparison.Ordinal);
+        return l != null && c != null && l > c;
     }
 
     private static Version? ParseVersion(string? v)
     {
         if (string.IsNullOrWhiteSpace(v)) return null;
         v = v.Trim().TrimStart('v', 'V');
-        var m = System.Text.RegularExpressions.Regex.Match(v, @"^(\d+)(?:\.(\d+))?(?:\.(\d+))?");
-        if (!m.Success) return null;
-        int major = int.Parse(m.Groups[1].Value);
-        int minor = m.Groups[2].Success ? int.Parse(m.Groups[2].Value) : 0;
-        int build = m.Groups[3].Success ? int.Parse(m.Groups[3].Value) : 0;
+        var m = System.Text.RegularExpressions.Regex.Match(v, @"^(\d+)\.(\d+)\.(\d+)$");
+        if (!m.Success
+            || !int.TryParse(m.Groups[1].Value, out int major)
+            || !int.TryParse(m.Groups[2].Value, out int minor)
+            || !int.TryParse(m.Groups[3].Value, out int build))
+        {
+            return null;
+        }
         return new Version(major, minor, build);
     }
 }

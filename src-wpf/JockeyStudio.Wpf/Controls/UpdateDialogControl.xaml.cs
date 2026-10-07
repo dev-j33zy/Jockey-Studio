@@ -21,8 +21,8 @@ public partial class UpdateDialogControl : UserControl
     /// <summary>Populate the dialog with a release before showing it.</summary>
     public void ShowUpdate(UpdateInfo info)
     {
-        CurrentVersionText.Text = "v" + info.CurrentVersion;
-        LatestVersionText.Text = "v" + info.LatestVersion;
+        CurrentVersionText.Text = "Current: v" + info.CurrentVersion;
+        LatestVersionText.Text = "Available: v" + info.LatestVersion;
         ReleaseNotesText.Text = string.IsNullOrWhiteSpace(info.ReleaseNotes)
             ? "No release notes for this version."
             : info.ReleaseNotes;

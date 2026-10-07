@@ -551,6 +551,7 @@ public sealed class PlayerEngine : IDisposable
         {
             deck.Ramping = false;
             deck.AutoMixDucked = false;
+            deck.AutoMixHeldPaused = false;
             deck.DuckFactor = 1f;
             deck.Gain = deck.Muted ? 0f : deck.Volume;
             deck.WaveVolume();

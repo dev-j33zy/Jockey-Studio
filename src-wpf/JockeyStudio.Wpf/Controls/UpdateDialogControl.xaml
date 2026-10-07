@@ -38,12 +38,13 @@
 
         <!-- Versions -->
         <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-          <StackPanel Orientation="Horizontal" Margin="16,14">
+          <StackPanel Orientation="Horizontal" Margin="16,14" VerticalAlignment="Center">
             <TextBlock x:Name="CurrentVersionText" Foreground="{DynamicResource TextDimBrush}"
-                       Typography.NumeralAlignment="Tabular" Text="v0.2.0"/>
-            <TextBlock Margin="10,0,0,0" FontSize="12" Foreground="{DynamicResource TextDimBrush}" Text="to"/>
-            <TextBlock x:Name="LatestVersionText" Margin="10,0,0,0" FontWeight="Bold"
-                       Foreground="{StaticResource AccentBrush}" Typography.NumeralAlignment="Tabular" Text="v0.2.0"/>
+                       Typography.NumeralAlignment="Tabular" Text="Current: v0.2.3"/>
+            <TextBlock Margin="10,0,10,0" FontSize="12" Foreground="{DynamicResource TextDimBrush}" Text="→"/>
+            <TextBlock x:Name="LatestVersionText" FontWeight="Bold"
+                       Foreground="{StaticResource AccentBrush}" Typography.NumeralAlignment="Tabular"
+                       Text="Available: v0.2.3"/>
           </StackPanel>
         </Border>
 

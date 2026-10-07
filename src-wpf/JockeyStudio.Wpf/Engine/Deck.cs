@@ -14,6 +14,7 @@ public sealed class Deck
     private readonly Action<Action>? _postToUi;
     private DeckPlayer? _player;
     private int _loadGen;
+    private double? _pendingSeekTarget;
 
     /// <summary>Raised after any change to the deck's persisted surface (media,
     /// volume, mute, loop, device, fades, automix). The engine forwards it so
@@ -165,6 +166,7 @@ public sealed class Deck
 
     private void StartPlayback(double from, bool stamp = false)
     {
+        _pendingSeekTarget = null;
         ClearDuckState();
         DisposePlayer();
 
@@ -245,6 +247,7 @@ public sealed class Deck
         }
         if (err != null)
         {
+            _pendingSeekTarget = null;
             player?.Dispose();
             if (gen == _loadGen)
             {
@@ -255,9 +258,20 @@ public sealed class Deck
         }
         if (player == null)
         {
+            _pendingSeekTarget = null;
             Status = PlaybackStatus.Error;
             Error = "output device not found";
             return;
+        }
+        if (_pendingSeekTarget is double pendingTarget)
+        {
+            _pendingSeekTarget = null;
+            if (Math.Abs(pendingTarget - from) > 0.0001)
+            {
+                player.Dispose();
+                StartPlayback(pendingTarget, stamp);
+                return;
+            }
         }
         _player = player;
         PositionSecs = from;
@@ -313,6 +327,10 @@ public sealed class Deck
         if (Status == PlaybackStatus.Playing)
         {
             StartPlayback(target);
+        }
+        else if (Status == PlaybackStatus.Loading)
+        {
+            _pendingSeekTarget = target;
         }
         else
         {

@@ -11,13 +11,29 @@ namespace JockeyStudio.Wpf.Helpers;
 /// ConverterParameter "h" or "v" selects orientation.</summary>
 public sealed class TrackClipConverter : IMultiValueConverter
 {
+    private static double ToDouble(object? value, double fallback = 0.0)
+    {
+        if (value is null) return fallback;
+        if (value is double d) return d;
+        if (value is float f) return f;
+        if (value is int i) return i;
+        if (value is long l) return l;
+        if (value is decimal dc) return (double)dc;
+        if (value is IConvertible c)
+        {
+            try { return c.ToDouble(CultureInfo.InvariantCulture); }
+            catch { }
+        }
+        return fallback;
+    }
+
     public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
     {
-        double w = values.Length > 0 && values[0] is double dw ? dw : 0.0;
-        double h = values.Length > 1 && values[1] is double dh ? dh : 0.0;
-        double v = values.Length > 2 && values[2] is double dv ? dv : 0.0;
-        double max = values.Length > 3 && values[3] is double dm ? dm : 1.0;
-        double min = values.Length > 4 && values[4] is double dn ? dn : 0.0;
+        double w = values.Length > 0 ? ToDouble(values[0], 0.0) : 0.0;
+        double h = values.Length > 1 ? ToDouble(values[1], 0.0) : 0.0;
+        double v = values.Length > 2 ? ToDouble(values[2], 0.0) : 0.0;
+        double max = values.Length > 3 ? ToDouble(values[3], 1.0) : 1.0;
+        double min = values.Length > 4 ? ToDouble(values[4], 0.0) : 0.0;
         double span = max - min;
         double ratio = span > 0 ? Math.Max(0.0, Math.Min(1.0, (v - min) / span)) : 0.0;
         if (parameter is string ps && ps == "v")
@@ -36,13 +52,27 @@ public sealed class TrackClipConverter : IMultiValueConverter
 /// Value/Maximum. Consumed as a MultiBinding on a ScaleTransform.</summary>
 public sealed class RatioScaleConverter : IMultiValueConverter
 {
+    private static double ToDouble(object? value, double fallback = 0.0)
+    {
+        if (value is null) return fallback;
+        if (value is double d) return d;
+        if (value is float f) return f;
+        if (value is int i) return i;
+        if (value is long l) return l;
+        if (value is decimal dc) return (double)dc;
+        if (value is IConvertible c)
+        {
+            try { return c.ToDouble(CultureInfo.InvariantCulture); }
+            catch { }
+        }
+        return fallback;
+    }
+
     public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
     {
-        double value = 0.0;
-        double max = 1.0;
-        if (values.Length > 0 && values[0] is double v) value = v;
-        if (values.Length > 1 && values[1] is double m) max = m;
-        if (values.Length > 2 && values[2] is double min) value -= min;
+        double value = values.Length > 0 ? ToDouble(values[0], 0.0) : 0.0;
+        double max = values.Length > 1 ? ToDouble(values[1], 1.0) : 1.0;
+        if (values.Length > 2) value -= ToDouble(values[2], 0.0);
         if (max <= 0.0) max = 1.0;
         double ratio = value / max;
         if (ratio < 0.0) ratio = 0.0;
