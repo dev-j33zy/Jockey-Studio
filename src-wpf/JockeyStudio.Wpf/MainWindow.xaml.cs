@@ -69,9 +69,11 @@ public partial class MainWindow : Window
     // View > zoom: rescales the deck grid by scaling its auto-fill minimum.
     private const double BaseCardWidth = 320.0;
     private const double BaseCardGap = 16.0;
+    private const double BaseListGap = 8.0;
     private const double ZoomMin = 0.5;
     private const double ZoomMax = 1.8;
     private double _zoom = 1.0;
+    private bool _isListView;
 
     // View > full screen (F11).
     private bool _isFullScreen;
@@ -94,6 +96,7 @@ public partial class MainWindow : Window
         // Restore the persisted appearance + zoom (theme is applied by the host
         // App before this window exists, so only the menu checks need syncing).
         SetZoom(AppPrefs.Zoom);
+        SetListView(AppPrefs.ListView, persist: false);
         ThemeManager.ThemeChanged += (_, _) => SyncThemeItems();
         SyncThemeItems();
 
@@ -211,6 +214,7 @@ public partial class MainWindow : Window
     private void AddDeckCard(Deck deck)
     {
         var card = new TileCardControl();
+        card.IsListView = _isListView;
         card.Bind(deck);
         card.IsSelected = ReferenceEquals(deck, _selectedDeck);
         card.SetDeviceList(_engine.ListDevices(), _engine.DefaultDeviceDisplayName());
@@ -425,9 +429,14 @@ public partial class MainWindow : Window
         DeckPanel.InvalidateMeasure();
     }
 
-    private static Border BuildDropSlot()
+    private Border BuildDropSlot()
     {
-        var tile = new Border { CornerRadius = new CornerRadius(12), MinHeight = 320, IsHitTestVisible = false };
+        var tile = new Border
+        {
+            CornerRadius = new CornerRadius(_isListView ? 10 : 12),
+            MinHeight = _isListView ? 78 : 320,
+            IsHitTestVisible = false,
+        };
         tile.Child = new Rectangle
         {
             Fill = new SolidColorBrush(Color.FromArgb(0x0F, 0x3E, 0xCF, 0x8E)),
@@ -687,6 +696,19 @@ public partial class MainWindow : Window
 
     private void FullScreen_Executed(object sender, ExecutedRoutedEventArgs e) => ToggleFullScreen();
 
+    private void ListView_Click(object sender, RoutedEventArgs e)
+        => SetListView(ListViewItem.IsChecked);
+
+    private void SetListView(bool listView, bool persist = true)
+    {
+        _isListView = listView;
+        ListViewItem.IsChecked = listView;
+        DeckPanel.SingleColumn = listView;
+        DeckPanel.ItemGap = (listView ? BaseListGap : BaseCardGap) * _zoom;
+        foreach (var card in _cards) card.IsListView = listView;
+        if (persist) AppPrefs.SetListView(listView);
+    }
+
     /// <summary>Toggle between the normal chrome and a borderless maximized
     /// view; the previous style/state are restored when toggling back.</summary>
     private void ToggleFullScreen()
@@ -749,7 +771,7 @@ public partial class MainWindow : Window
     {
         _zoom = Math.Clamp(zoom, ZoomMin, ZoomMax);
         DeckPanel.MinItemWidth = BaseCardWidth * _zoom;
-        DeckPanel.ItemGap = BaseCardGap * _zoom;
+        DeckPanel.ItemGap = (_isListView ? BaseListGap : BaseCardGap) * _zoom;
         AppPrefs.SetZoom(_zoom);
     }
 

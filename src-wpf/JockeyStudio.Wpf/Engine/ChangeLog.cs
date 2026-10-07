@@ -22,21 +22,64 @@ public static class ChangeLog
     /// "What's new" page. Kept separate from the versioned history because it
     /// describes the in-development behavior of this build, not a shipped
     /// release.</summary>
-    public const string LatestTitle = "A real Windows installer, and auto-update that works";
+    public const string LatestTitle = "Compact List View and more reliable seeking";
 
     /// <summary>Explanation of the current build's headline change (moved here
     /// from the About page).</summary>
     public const string LatestSummary =
-        "Jockey Studio installs itself again. Releases ship a JockeyStudio_<version>_x64-setup.exe " +
-        "that puts the app in Program Files with a Start Menu shortcut and an Add/Remove Programs " +
-        "entry, and the in-app updater now runs that installer instead of copying an executable " +
-        "over itself — which used to fail silently whenever the app's path contained a space, " +
-        "leaving the update prompt to reappear on every launch.";
+        "Switch between tiled decks and compact stacked rows from the View menu; your choice is " +
+        "remembered, and rows can be reordered by dragging. Both seekers now jump directly to " +
+        "clicked timestamps during playback without changing play/pause state. The list seeker " +
+        "shows a hover timestamp, and tile Loop and Auto-mix controls identify themselves on hover.";
 
     /// <summary>Versioned history, newest first. Sync source: CHANGELOG.md (the
     /// release notes published to GitHub and shown by the updater dialog).</summary>
     public static IReadOnlyList<ChangeLogEntry> Versions { get; } = new[]
     {
+        new ChangeLogEntry
+        {
+            Version = "0.2.5",
+            Title = "Compact List View, more reliable seeking, and clearer deck controls",
+            Date = "2026-10-07",
+            Items = new[]
+            {
+                "List View — switch between tiled decks and compact stacked rows from the View menu; the choice is remembered. Rows include playback, seeking, metadata and deck controls, and can be reordered by dragging.",
+                "More reliable seeking — clicking either seeker jumps directly to the requested timestamp, even during active playback or repeated clicks. Seeking keeps the play/pause state unchanged; empty-deck seekers start at the left edge.",
+                "List seeker hover time — hovering the list seeker displays the timestamp at the pointer.",
+                "Deck control tooltips — tile-view Loop and Auto-mix buttons now identify themselves on hover.",
+                "List layout refinements — fixed the Remove button alignment and positioned metadata with the row controls.",
+            },
+        },
+        new ChangeLogEntry
+        {
+            Version = "0.2.4",
+            Title = "Seeking during playback now follows the most recent click, and update notifications compare versions strictly",
+            Date = "2026-10-07",
+            Items = new[]
+            {
+                "More reliable seeking — clicks made while the audio pipeline is restarting are remembered; playback resumes at the latest requested position instead of an earlier seek.",
+                "Accurate update checks — an update is offered only when both the installed and release versions parse as major.minor.patch and the release version is greater. The dialog labels the current and available versions.",
+                "Robust slider values — slider converters handle common numeric value types, not just double.",
+                "Preserve settings-only state — saved non-default settings remain restorable even when no decks or media are present; automix hold state is cleared during deck restoration.",
+            },
+        },
+        new ChangeLogEntry
+        {
+            Version = "0.2.3",
+            Title = "Sliders respond where you click, the volume button says what it is set to, and an update clears out the old 0.1.x app so the shortcuts point at this one",
+            Date = "2026-09-28",
+            Items = new[]
+            {
+                "Click a slider to jump to that point — clicking the bar used to nudge the value by one LargeChange step, because the track is drawn as two transparent RepeatButtons bound to Slider.Increase/DecreaseLarge. This now works on the seek bar, all five auto-mix and fade sliders in Settings, and the volume fader.",
+                "Volume level on hover — the volume button reports the level its deck is playing at, and stops doing so while the volume modal is open, where the level is already on screen.",
+                "Updates clear the 0.1.x app — the old Tauri build was a separate per-user product with its own install folder, shortcuts and Programs entry, and it shares no AppId with this installer, so an update could never supersede it. A machine that ran 0.1.x was left with two Jockey Studio entries in the Start menu and in Add/Remove Programs, and the stale one kept launching the old app even after a successful update. Installing any current release now removes those leftovers for every account on the machine, so one install leaves one shortcut and one Programs entry. Your settings and deck data are untouched.",
+                "App icon — the Jockey Studio icon is now embedded in the executable and shown in the window, Settings and About, replacing the default WPF icon.",
+                "Space-free release asset — the published installer is JockeyStudio_<version>_x64.exe (no spaces), which is what CI names the asset and what the in-app updater expects.",
+                "Automated releases — pushing a v* tag now builds the self-contained executable and publishes it to GitHub Releases with the matching section of the changelog as its release notes; installers are no longer tracked in the repository.",
+                "App identifier — settings and state now live under com.jockeystudio.app. Installs that were on com.cjaycapillo.jockeystudio start with default settings; see the README for the old folder's paths.",
+                "README — corrected copyright and the cleanup steps for machines still carrying a 0.1.x Tauri/Rust install.",
+            },
+        },
         new ChangeLogEntry
         {
             Version = "0.2.2",

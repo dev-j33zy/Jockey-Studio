@@ -19,13 +19,19 @@ public sealed class TileGridPanel : Panel
         nameof(ItemGap), typeof(double), typeof(TileGridPanel),
         new FrameworkPropertyMetadata(16.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly DependencyProperty SingleColumnProperty = DependencyProperty.Register(
+        nameof(SingleColumn), typeof(bool), typeof(TileGridPanel),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
     public double MinItemWidth { get => (double)GetValue(MinItemWidthProperty); set => SetValue(MinItemWidthProperty, value); }
     public double ItemGap { get => (double)GetValue(ItemGapProperty); set => SetValue(ItemGapProperty, value); }
+    public bool SingleColumn { get => (bool)GetValue(SingleColumnProperty); set => SetValue(SingleColumnProperty, value); }
 
     private int _columns;
 
     private (int columns, double colWidth) ComputeColumns(double width)
     {
+        if (SingleColumn) return (1, width);
         double gap = ItemGap;
         double minW = MinItemWidth;
         int cols = Math.Max(1, (int)Math.Floor((width + gap) / (minW + gap)));

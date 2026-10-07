@@ -84,7 +84,8 @@ public partial class TileCardControl : UserControl
     }
 
     public static readonly DependencyProperty DurationSecsProperty = DependencyProperty.Register(
-        nameof(DurationSecs), typeof(double), typeof(TileCardControl), new PropertyMetadata(0.0));
+        nameof(DurationSecs), typeof(double), typeof(TileCardControl),
+        new PropertyMetadata(0.0, OnDurationChanged));
 
     public double DurationSecs
     {
@@ -198,9 +199,23 @@ public partial class TileCardControl : UserControl
     private string _defaultDeviceLabel = "System Default";
     private bool _updating;
     private bool _seeking;
-    private DateTime _lastSeek = DateTime.MinValue;
+    private double _lastSeekTarget = double.NaN;
+    private bool _isListView;
 
-    private const int SeekThrottleMs = 90;
+    public bool IsListView
+    {
+        get => _isListView;
+        set
+        {
+            if (_isListView == value) return;
+            ClosePopups();
+            _isListView = value;
+            CardBorder.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
+            RowBorder.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+            MinWidth = value ? 0 : 320;
+            MinHeight = value ? 78 : 320;
+        }
+    }
 
     /// <summary>Raised when the user presses the left button on the card
     /// header to start a tile-reorder drag. The window owns the drag session
@@ -255,8 +270,17 @@ public partial class TileCardControl : UserControl
         Seek.PreviewMouseMove += Seek_PreviewMouseMove;
         Seek.MouseLeave += Seek_MouseLeave;
         Seek.ValueChanged += Seek_ValueChanged;
-        Seek.PreviewMouseLeftButtonDown += Seek_PreviewMouseLeftButtonDown;
-        Seek.PreviewMouseLeftButtonUp += Seek_PreviewMouseLeftButtonUp;
+        Seek.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
+            new MouseButtonEventHandler(Seek_PreviewMouseLeftButtonDown), true);
+        Seek.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent,
+            new MouseButtonEventHandler(Seek_PreviewMouseLeftButtonUp), true);
+        RowSeek.PreviewMouseMove += Seek_PreviewMouseMove;
+        RowSeek.MouseLeave += Seek_MouseLeave;
+        RowSeek.ValueChanged += Seek_ValueChanged;
+        RowSeek.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
+            new MouseButtonEventHandler(Seek_PreviewMouseLeftButtonDown), true);
+        RowSeek.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent,
+            new MouseButtonEventHandler(Seek_PreviewMouseLeftButtonUp), true);
         VolumeSlider.ValueChanged += VolumeSlider_ValueChanged;
         VolumeSlider.PreviewMouseLeftButtonDown += VolumeSlider_PreviewMouseLeftButtonDown;
         VolumeSlider.MouseWheel += VolumeSlider_MouseWheel;
@@ -274,6 +298,23 @@ public partial class TileCardControl : UserControl
         if (e.OriginalSource is DependencyObject source && IsInsideButton(source)) return;
         RaiseEvent(new RoutedEventArgs(ReorderDragRequestedEvent, this));
         e.Handled = true;
+    }
+
+    private void RowBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (RowSeek.IsMouseOver) return;
+        if (e.OriginalSource is DependencyObject source && IsInsideRowControl(source)) return;
+        RaiseEvent(new RoutedEventArgs(ReorderDragRequestedEvent, this));
+        e.Handled = true;
+    }
+
+    private static bool IsInsideRowControl(DependencyObject? node)
+    {
+        for (; node != null; node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is ButtonBase or Slider) return true;
+        }
+        return false;
     }
 
     private static bool IsInsideButton(DependencyObject? node)
@@ -322,7 +363,8 @@ public partial class TileCardControl : UserControl
             Status = MapStatus(_deck.Status);
             Error = _deck.Error ?? "";
             MediaType = _deck.MediaType;
-            if (!_seeking) PositionSecs = _deck.PositionSecs;
+            RowMediaType.Visibility = _deck.HasMedia ? Visibility.Visible : Visibility.Collapsed;
+            if (!_seeking || !_deck.HasMedia) PositionSecs = _deck.PositionSecs;
             DurationSecs = _deck.DurationSecs;
             Volume = _deck.Volume;
             EffectiveVolume = _deck.EffectiveVolume;
@@ -335,6 +377,7 @@ public partial class TileCardControl : UserControl
             DevBtn.ToolTip = _deck.DeviceId == EngineConst.DEFAULT_DEVICE_ID
                 ? $"Output: Default ({_defaultDeviceLabel})"
                 : $"Output: {_deck.DeviceId}";
+            RowDevBtn.ToolTip = DevBtn.ToolTip;
             UpdateVolumeTooltip();
 
             UpdateStatusUi();
@@ -379,8 +422,17 @@ public partial class TileCardControl : UserControl
     private static void OnPositionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var c = (TileCardControl)d;
-        var max = c.DurationSecs > 0 ? c.DurationSecs : 1.0;
-        if (c.Seek.Maximum != max) c.Seek.Maximum = max;
+        c.UpdateSeekMaximum();
+    }
+
+    private static void OnDurationChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        => ((TileCardControl)d).UpdateSeekMaximum();
+
+    private void UpdateSeekMaximum()
+    {
+        double max = DurationSecs > 0 ? DurationSecs : 1.0;
+        if (Seek.Maximum != max) Seek.Maximum = max;
+        if (RowSeek.Maximum != max) RowSeek.Maximum = max;
     }
 
     private void UpdateStatusUi()
@@ -391,7 +443,14 @@ public partial class TileCardControl : UserControl
         Ctl.SetIsEngaged(PlayBtn, playing);
         PlayBtn.IsEnabled = HasMedia;
         Seek.IsEnabled = HasMedia;
+        RowPlayIconShow.Visibility = playing ? Visibility.Collapsed : Visibility.Visible;
+        RowPauseIconShow.Visibility = playing ? Visibility.Visible : Visibility.Collapsed;
+        Ctl.SetIsEngaged(RowPlayBtn, playing);
+        RowPlayBtn.IsEnabled = HasMedia;
+        RowSeek.IsEnabled = HasMedia;
         ErrorText.Visibility = Status == TileStatus.Error && !string.IsNullOrEmpty(Error)
+            ? Visibility.Visible : Visibility.Collapsed;
+        RowErrorText.Visibility = Status == TileStatus.Error && !string.IsNullOrEmpty(Error)
             ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -400,11 +459,14 @@ public partial class TileCardControl : UserControl
         MuteIconNormal.Visibility = IsMuted ? Visibility.Collapsed : Visibility.Visible;
         MuteIconMuted.Visibility = IsMuted ? Visibility.Visible : Visibility.Collapsed;
         Ctl.SetIsEngaged(MuteBtn, IsMuted);
+        RowVolumeIconShow.Visibility = IsMuted ? Visibility.Collapsed : Visibility.Visible;
+        RowVolumeMuteIconShow.Visibility = IsMuted ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void ApplyLoopMode()
     {
         Ctl.SetIsEngaged(LoopBtn, LoopMode != "off");
+        Ctl.SetIsEngaged(RowLoopBtn, LoopMode != "off");
         Ctl.SetIsActive(LoopOffItem, LoopMode == "off");
         Ctl.SetIsActive(LoopEndlessItem, LoopMode == "endless");
         Ctl.SetIsActive(Loop2Item, LoopMode == "x2");
@@ -424,10 +486,14 @@ public partial class TileCardControl : UserControl
         DevicePopup.IsOpen = false;
         LoopPopup.IsOpen = false;
         PopupVeil.Visibility = Visibility.Collapsed;
+        RowPopupVeil.Visibility = Visibility.Collapsed;
         _openPopup = null;
         Ctl.SetIsPopupOpen(VolBtn, false);
         Ctl.SetIsPopupOpen(DevBtn, false);
         Ctl.SetIsPopupOpen(LoopBtn, false);
+        Ctl.SetIsPopupOpen(RowVolBtn, false);
+        Ctl.SetIsPopupOpen(RowDevBtn, false);
+        Ctl.SetIsPopupOpen(RowLoopBtn, false);
         UpdateVolumeTooltip();
     }
 
@@ -443,21 +509,28 @@ public partial class TileCardControl : UserControl
         CloseAllPopupsEverywhere();
         _openPopup = kind;
         PopupVeil.Visibility = Visibility.Visible;
+        RowPopupVeil.Visibility = Visibility.Visible;
         switch (kind)
         {
             case "vol":
+                VolumePopup.PlacementTarget = IsListView ? RowVolBtn : VolBtn;
                 VolumePopup.IsOpen = true;
                 Ctl.SetIsPopupOpen(VolBtn, true);
+                Ctl.SetIsPopupOpen(RowVolBtn, true);
                 break;
             case "dev":
                 DeviceListNeedsRefresh?.Invoke();
                 RebuildDeviceList();
+                DevicePopup.PlacementTarget = IsListView ? RowDevBtn : DevBtn;
                 DevicePopup.IsOpen = true;
                 Ctl.SetIsPopupOpen(DevBtn, true);
+                Ctl.SetIsPopupOpen(RowDevBtn, true);
                 break;
             case "loop":
+                LoopPopup.PlacementTarget = IsListView ? RowLoopBtn : LoopBtn;
                 LoopPopup.IsOpen = true;
                 Ctl.SetIsPopupOpen(LoopBtn, true);
+                Ctl.SetIsPopupOpen(RowLoopBtn, true);
                 break;
         }
         UpdateVolumeTooltip();
@@ -469,7 +542,9 @@ public partial class TileCardControl : UserControl
     private void UpdateVolumeTooltip()
     {
         ToolTipService.SetIsEnabled(VolBtn, _openPopup != "vol");
+        ToolTipService.SetIsEnabled(RowVolBtn, _openPopup != "vol");
         VolBtn.ToolTip = $"Volume: {(int)Math.Round(EffectiveVolume * 100.0)}%";
+        RowVolBtn.ToolTip = VolBtn.ToolTip;
     }
 
     // Clicking any modal's toggle button closes every open modal across all
@@ -680,22 +755,59 @@ public partial class TileCardControl : UserControl
     private void Seek_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_updating || _deck == null || !_seeking) return;
-        var now = DateTime.UtcNow;
-        if ((now - _lastSeek).TotalMilliseconds < SeekThrottleMs) return;
-        _lastSeek = now;
-        _deck.Seek(e.NewValue);
+        double target = ((Slider)sender).Value;
+        if (!double.IsNaN(_lastSeekTarget) && Math.Abs(target - _lastSeekTarget) < 0.001) return;
+        _lastSeekTarget = target;
+        _deck.Seek(target);
     }
 
     private void Seek_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (sender is not Slider slider) return;
         _seeking = true;
-        _lastSeek = DateTime.MinValue;
+        _lastSeekTarget = double.NaN;
+        if (!IsInsideSliderThumb(slider, e.OriginalSource as DependencyObject))
+        {
+            SeekToPointerPosition(slider, e);
+            e.Handled = true;
+        }
     }
 
     private void Seek_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         _seeking = false;
-        _deck?.Seek(Seek.Value);
+        double target = ((Slider)sender).Value;
+        if (_deck != null && (double.IsNaN(_lastSeekTarget) || Math.Abs(target - _lastSeekTarget) >= 0.001))
+        {
+            _deck.Seek(target);
+        }
+        _lastSeekTarget = double.NaN;
+    }
+
+    private void SeekToPointerPosition(Slider slider, MouseButtonEventArgs e)
+    {
+        if (_deck == null || !HasMedia || slider.Template.FindName("PART_Track", slider) is not Track track)
+            return;
+
+        double thumbWidth = Math.Max(track.Thumb?.ActualWidth ?? 0, 14);
+        double travel = track.ActualWidth - thumbWidth;
+        if (travel <= 0) return;
+
+        Point trackOrigin = track.TranslatePoint(new Point(0, 0), slider);
+        double pointerX = e.GetPosition(slider).X - trackOrigin.X;
+        double ratio = Math.Clamp((pointerX - thumbWidth / 2) / travel, 0, 1);
+        double value = slider.Minimum + ratio * (slider.Maximum - slider.Minimum);
+        if (double.IsFinite(value)) slider.Value = value;
+    }
+
+    private static bool IsInsideSliderThumb(Slider slider, DependencyObject? source)
+    {
+        for (DependencyObject? node = source; node != null && !ReferenceEquals(node, slider);
+             node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is Thumb) return true;
+        }
+        return false;
     }
 
     // ---------------- device popup list ----------------
@@ -777,18 +889,27 @@ public partial class TileCardControl : UserControl
     private void Seek_PreviewMouseMove(object sender, MouseEventArgs e)
     {
         if (!HasMedia) return;
-        double w = Seek.ActualWidth;
+        if (sender is not Slider slider) return;
+        bool isRowSeek = ReferenceEquals(slider, RowSeek);
+        Border tip = isRowSeek ? RowSeekTip : SeekTip;
+        TrackedText tipText = isRowSeek ? RowSeekTipText : SeekTipText;
+        double w = slider.ActualWidth;
         if (w <= 0) return;
         var max = DurationSecs > 0 ? DurationSecs : 1.0;
-        double x = e.GetPosition(Seek).X;
+        double x = e.GetPosition(slider).X;
         double ratio = Math.Clamp(x / w, 0.0, 1.0);
-        SeekTipText.Text = FormatTime(ratio * max);
-        SeekTip.Margin = new Thickness(Math.Clamp(x - 28, 0, w - 56) + 16, 9, 0, 0);
-        SeekTip.Visibility = Visibility.Visible;
+        tipText.Text = FormatTime(ratio * max);
+        tip.Margin = isRowSeek
+            ? new Thickness(Math.Clamp(x - 28, 0, Math.Max(0, w - 56)), -17, 0, 0)
+            : new Thickness(Math.Clamp(x - 28, 0, Math.Max(0, w - 56)) + 16, 9, 0, 0);
+        tip.Visibility = Visibility.Visible;
     }
 
     private void Seek_MouseLeave(object sender, MouseEventArgs e)
-        => SeekTip.Visibility = Visibility.Collapsed;
+    {
+        if (ReferenceEquals(sender, RowSeek)) RowSeekTip.Visibility = Visibility.Collapsed;
+        else SeekTip.Visibility = Visibility.Collapsed;
+    }
 
     private static string FormatTime(double secs)
     {

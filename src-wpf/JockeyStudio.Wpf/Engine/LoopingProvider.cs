@@ -20,6 +20,7 @@ public sealed class LoopingProvider : IWaveProvider
     private int _playsRemaining;
     private bool _wrapPending;
     private bool _done;
+    private string _loopMode;
 
     /// <summary>Non-0 when the final playthrough finished and the stream is done.</summary>
     public bool IsDone
@@ -30,10 +31,22 @@ public sealed class LoopingProvider : IWaveProvider
     public LoopingProvider(WaveStream source, string loopMode)
     {
         _source = source;
+        _loopMode = loopMode;
         _playsRemaining = PlaysFor(loopMode);
     }
 
     public WaveFormat WaveFormat => _source.WaveFormat;
+
+    public double PositionSecs
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _source.CurrentTime.TotalSeconds;
+            }
+        }
+    }
 
     public bool IsEndless
     {
@@ -53,7 +66,22 @@ public sealed class LoopingProvider : IWaveProvider
     {
         lock (_gate)
         {
+            _loopMode = loopMode;
             _playsRemaining = PlaysFor(loopMode);
+            _wrapPending = false;
+            _done = false;
+        }
+    }
+
+    /// <summary>Seek the source without rebuilding the playback pipeline.</summary>
+    public void SeekRuntime(double secs)
+    {
+        lock (_gate)
+        {
+            double duration = _source.TotalTime.TotalSeconds;
+            double target = Math.Clamp(secs, 0, Math.Max(0, duration));
+            _source.CurrentTime = TimeSpan.FromSeconds(target);
+            if (_done) _playsRemaining = PlaysFor(_loopMode);
             _wrapPending = false;
             _done = false;
         }
@@ -73,24 +101,23 @@ public sealed class LoopingProvider : IWaveProvider
 
     public int Read(byte[] buffer, int offset, int count)
     {
-        int total = 0;
-        while (total < count)
+        lock (_gate)
         {
-            if (IsDone)
+            int total = 0;
+            while (total < count)
             {
-                Array.Clear(buffer, offset + total, count - total);
-                break;
-            }
+                if (_done)
+                {
+                    Array.Clear(buffer, offset + total, count - total);
+                    break;
+                }
 
-            bool beforeEnd = SafeAtEnd();
-            int read = _source.Read(buffer, offset + total, count - total);
-            total += read;
-            bool atEnd = read == 0 || SafeAtEnd();
+                bool beforeEnd = SafeAtEnd();
+                int read = _source.Read(buffer, offset + total, count - total);
+                total += read;
+                bool atEnd = read == 0 || SafeAtEnd();
 
-            if (read == 0 || (beforeEnd && atEnd))
-            {
-                bool wrap;
-                lock (_gate)
+                if (read == 0 || (beforeEnd && atEnd))
                 {
                     if (_playsRemaining > 1)
                     {
@@ -98,27 +125,21 @@ public sealed class LoopingProvider : IWaveProvider
                         // reaches 1, so it wraps forever.
                         _playsRemaining--;
                         _wrapPending = true;
-                        wrap = true;
+                        SeekStart();
+                        continue;
                     }
                     else
                     {
                         _playsRemaining = 0;
                         _done = true;
-                        wrap = false;
                     }
+                    Array.Clear(buffer, offset + total, count - total);
+                    break;
                 }
-
-                if (wrap)
-                {
-                    SeekStart();
-                    continue;
-                }
-                Array.Clear(buffer, offset + total, count - total);
-                break;
+                if (total < count) continue;
             }
-            if (total < count) continue;
+            return total;
         }
-        return total;
     }
 
     private bool SafeAtEnd()

@@ -13,7 +13,7 @@
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
 
-      <!-- Brand: dot + title + version badge -->
+      <!-- Brand: dot + title -->
       <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
         <Border Width="14" Height="14" CornerRadius="7"
                 Background="{StaticResource BrandDotBrush}">
@@ -24,10 +24,6 @@
         <local:TrackedText Margin="10,0,0,0" FontSize="16" FontWeight="SemiBold" LetterSpacing="0.4"
                    Foreground="{DynamicResource TextBrush}"
                    Text="Jockey Studio" VerticalAlignment="Center"/>
-        <Border Style="{StaticResource Badge}" Margin="10,0,0,0">
-          <TextBlock FontSize="11" Foreground="{DynamicResource TextDimBrush}" Text="Native"
-                     VerticalAlignment="Center" HorizontalAlignment="Center"/>
-        </Border>
       </StackPanel>
 
       <!-- Actions -->

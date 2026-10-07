@@ -87,6 +87,8 @@
         <MenuItem Header="_View">
           <MenuItem x:Name="FullScreenItem" Command="{x:Static local:MainWindow.FullScreenCommand}"
                     IsCheckable="True" InputGestureText="F11"/>
+          <MenuItem x:Name="ListViewItem" Header="_List View" IsCheckable="True"
+                    Click="ListView_Click"/>
           <MenuItem Header="_Appearance">
             <MenuItem x:Name="ThemeLightItem" Header="_Light Mode" IsCheckable="True"
                       Click="ThemeLight_Click"/>

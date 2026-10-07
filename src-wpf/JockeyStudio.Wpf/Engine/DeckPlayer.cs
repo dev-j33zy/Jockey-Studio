@@ -115,7 +115,7 @@ public sealed class DeckPlayer : IDisposable
             if (_reader == null) return 0;
             try
             {
-                double p = _reader.CurrentTime.TotalSeconds;
+                double p = _loop?.PositionSecs ?? 0;
                 double len = _reader.TotalTime.TotalSeconds;
                 return Math.Clamp(p, 0, Math.Max(0, len));
             }
@@ -125,14 +125,11 @@ public sealed class DeckPlayer : IDisposable
 
     public double DurationSecs => _reader?.TotalTime.TotalSeconds ?? 0;
 
-    /// <summary>Seek the underlying reader while keeping the pipeline warm.
-    /// Only usable when the deck treats playback as paused-for-seek; the engine
-    /// usually rebuilds the pipeline via <see cref="Open"/> instead.</summary>
+    /// <summary>Seek the active stream while keeping its output pipeline running.</summary>
     public void SeekRuntime(double secs)
     {
-        if (_reader == null) return;
-        try { _reader.CurrentTime = TimeSpan.FromSeconds(Math.Max(0, secs)); }
-        catch { }
+        if (_loop == null) throw new InvalidOperationException("playback stream is unavailable");
+        _loop.SeekRuntime(secs);
     }
 
     public void Dispose() => Cleanup();

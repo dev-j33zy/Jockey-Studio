@@ -147,8 +147,7 @@
 
           <Grid>
             <Slider x:Name="Seek" Style="{StaticResource FillSliderH}" Margin="0,10,0,6"
-                    Minimum="0"
-                    Maximum="{Binding DurationSecs, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}"
+                    Minimum="0" Maximum="1" IsMoveToPointEnabled="False"
                     Value="{Binding PositionSecs, RelativeSource={RelativeSource AncestorType=local:TileCardControl}, Mode=TwoWay}"
                     IsEnabled="{Binding HasMedia, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}"/>
             <Border x:Name="SeekTip" Visibility="Collapsed"
@@ -181,7 +180,8 @@
               <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Button x:Name="LoopBtn" Grid.Column="0" Style="{StaticResource TbCtlIcon}" Margin="2,0" Click="LoopBtn_Click">
+            <Button x:Name="LoopBtn" Grid.Column="0" Style="{StaticResource TbCtlIcon}" Margin="2,0"
+                    ToolTip="Loop repeats" Click="LoopBtn_Click">
               <local:LoopBadgeControl Value="{Binding LoopMode, RelativeSource={RelativeSource AncestorType=local:TileCardControl}, FallbackValue=off}"/>
             </Button>
             <Button x:Name="VolBtn" Grid.Column="1" Style="{StaticResource TbCtlIcon}" Margin="2,0" Click="VolBtn_Click">
@@ -193,7 +193,8 @@
                                 Visibility="Collapsed"/>
               </Grid>
             </Button>
-            <Button x:Name="AutoMixBtn" Grid.Column="2" Style="{StaticResource TbCtlIcon}" Margin="2,0" Click="AutoMixBtn_Click"
+            <Button x:Name="AutoMixBtn" Grid.Column="2" Style="{StaticResource TbCtlIcon}" Margin="2,0"
+                    ToolTip="Auto-mix" Click="AutoMixBtn_Click"
                     helpers:Ctl.IsEngaged="{Binding AutoMix, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}">
               <ContentControl Width="18" Height="18" Content="" ContentTemplate="{StaticResource IconShuffle}"
                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
@@ -210,6 +211,158 @@
         <Rectangle x:Name="PopupVeil" Grid.Row="0" Grid.RowSpan="2"
                    Fill="Transparent" Visibility="Collapsed"
                    MouseDown="PopupVeil_MouseDown"/>
+      </Grid>
+    </Border>
+
+    <!-- ===================== Compact list row ===================== -->
+    <Border x:Name="RowBorder" Visibility="Collapsed" MinHeight="78"
+            CornerRadius="10" BorderThickness="1" Padding="10,8"
+            PreviewMouseLeftButtonDown="RowBorder_MouseLeftButtonDown">
+      <Border.Style>
+        <Style TargetType="Border">
+          <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+          <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+          <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter Property="BorderBrush" Value="{DynamicResource HoverBorderBrush}"/>
+            </Trigger>
+            <DataTrigger Binding="{Binding Status, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}" Value="Playing">
+              <Setter Property="BorderBrush" Value="#B33ECF8E"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}" Value="Error">
+              <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}" Value="True">
+              <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+              <Setter Property="BorderThickness" Value="2"/>
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </Border.Style>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="52"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <Button x:Name="RowPlayBtn" Grid.Column="0" Style="{StaticResource TbCtlIcon}"
+                Width="40" Height="40" HorizontalAlignment="Left" Click="PlayBtn_Click">
+          <Grid>
+            <ContentControl x:Name="RowPlayIconShow" Width="20" Height="20" Content=""
+                            ContentTemplate="{StaticResource IconPlay}" Foreground="{DynamicResource TextBrush}"/>
+            <ContentControl x:Name="RowPauseIconShow" Width="20" Height="20" Content=""
+                            ContentTemplate="{StaticResource IconPause}" Foreground="{StaticResource OkBrush}"
+                            Visibility="Collapsed"/>
+          </Grid>
+        </Button>
+
+        <Grid Grid.Column="1" Margin="8,0,14,0" VerticalAlignment="Center">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <Border x:Name="RowTitleDock" Grid.Row="0">
+            <TextBlock FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"
+                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="Text" Value="{Binding Title, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasMedia, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}" Value="False">
+                      <Setter Property="Text" Value="Empty Deck"/>
+                      <Setter Property="Foreground" Value="{DynamicResource TextDimBrush}"/>
+                      <Setter Property="FontWeight" Value="Medium"/>
+                      <Setter Property="Opacity" Value="0.45"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </Border>
+          <Grid Grid.Row="1" Margin="0,3,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <local:TrackedText FontSize="10" LetterSpacing="0.3" Tabular="True"
+                                 Foreground="{DynamicResource TextDimBrush}"
+                                 Text="{Binding PositionSecs, RelativeSource={RelativeSource AncestorType=local:TileCardControl}, Converter={StaticResource FmtTime}}"/>
+              <local:TrackedText Margin="4,0,6,0" FontSize="10" LetterSpacing="0.3" Tabular="True"
+                                 Foreground="{DynamicResource TextDimBrush}"
+                                 Text="{Binding DurationSecs, RelativeSource={RelativeSource AncestorType=local:TileCardControl}, Converter={StaticResource FmtDuration}, StringFormat='/ {0}'}"/>
+            </StackPanel>
+            <Grid Grid.Column="1" Height="20">
+              <Slider x:Name="RowSeek" Style="{StaticResource FillSliderH}"
+                      Height="20" Margin="0" Minimum="0" Maximum="1" IsMoveToPointEnabled="False"
+                      Value="{Binding PositionSecs, RelativeSource={RelativeSource AncestorType=local:TileCardControl}, Mode=TwoWay}"
+                      IsEnabled="{Binding HasMedia, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}"/>
+              <Border x:Name="RowSeekTip" Visibility="Collapsed"
+                      Background="{DynamicResource TipBgBrush}" BorderBrush="{DynamicResource TipBorderBrush}"
+                      BorderThickness="1" CornerRadius="8" Padding="9,3"
+                      VerticalAlignment="Top" Height="20" Margin="0,-17,0,0"
+                      HorizontalAlignment="Left" IsHitTestVisible="False">
+                <local:TrackedText x:Name="RowSeekTipText" FontSize="11" FontWeight="Medium"
+                                   LetterSpacing="0.4" Tabular="True" Foreground="{DynamicResource TextBrush}"
+                                   VerticalAlignment="Center"/>
+              </Border>
+            </Grid>
+          </Grid>
+          <TextBlock x:Name="RowErrorText" Grid.Row="2" Visibility="Collapsed"
+                     FontSize="10" Foreground="{StaticResource DangerBrush}" TextTrimming="CharacterEllipsis"
+                     Text="{Binding Error, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}"/>
+        </Grid>
+
+        <Grid Grid.Column="2" VerticalAlignment="Center">
+          <StackPanel VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+              <StackPanel.RenderTransform>
+                <TranslateTransform Y="-5"/>
+              </StackPanel.RenderTransform>
+              <Button x:Name="RowLoopBtn" Style="{StaticResource TbCtlIcon}" Width="36" Height="36"
+                      Margin="0,0,2,0" ToolTip="Loop repeats" Click="LoopBtn_Click">
+                <local:LoopBadgeControl Value="{Binding LoopMode, RelativeSource={RelativeSource AncestorType=local:TileCardControl}, FallbackValue=off}"/>
+              </Button>
+              <Button x:Name="RowVolBtn" Style="{StaticResource TbCtlIcon}" Width="36" Height="36"
+                      Margin="0,0,2,0" ToolTip="Volume" Click="VolBtn_Click">
+                <Grid>
+                  <ContentControl x:Name="RowVolumeIconShow" Width="18" Height="18" Content=""
+                                  ContentTemplate="{StaticResource IconVolume}" Foreground="{DynamicResource TextDimBrush}"/>
+                  <ContentControl x:Name="RowVolumeMuteIconShow" Width="18" Height="18" Content=""
+                                  ContentTemplate="{StaticResource IconVolumeMute}" Foreground="{DynamicResource TextDimBrush}"
+                                  Visibility="Collapsed"/>
+                </Grid>
+              </Button>
+              <Button x:Name="RowAutoMixBtn" Style="{StaticResource TbCtlIcon}" Width="36" Height="36"
+                      Margin="0,0,2,0" ToolTip="Auto-mix" Click="AutoMixBtn_Click"
+                      helpers:Ctl.IsEngaged="{Binding AutoMix, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}">
+                <ContentControl Width="18" Height="18" Content="" ContentTemplate="{StaticResource IconShuffle}"
+                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+              </Button>
+              <Button x:Name="RowDevBtn" Style="{StaticResource TbCtlIcon}" Width="36" Height="36"
+                      ToolTip="Output device" Click="DevBtn_Click">
+                <ContentControl Width="18" Height="18" Content="" ContentTemplate="{StaticResource IconOutput}"
+                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+              </Button>
+              <Button x:Name="RowRemoveBtn" Style="{StaticResource TbToolButton}"
+                      ToolTip="Remove deck" Margin="8,0,0,0" Click="RemoveButton_Click">
+                <ContentControl Width="14" Height="14" Content="" ContentTemplate="{StaticResource IconClose}"
+                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+              </Button>
+            </StackPanel>
+            <local:TrackedText x:Name="RowMediaType" Margin="0,-5,0,0"
+                               FontSize="9" LetterSpacing="0.5" Opacity="0.7"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextDimBrush}"
+                               Text="{Binding MediaType, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}"/>
+          </StackPanel>
+        </Grid>
+
+        <Rectangle x:Name="RowPopupVeil" Grid.ColumnSpan="3" Fill="Transparent"
+                   Visibility="Collapsed" MouseDown="PopupVeil_MouseDown"/>
       </Grid>
     </Border>
 

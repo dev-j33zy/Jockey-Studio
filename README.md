@@ -13,6 +13,7 @@ Multi-deck audio mixing workstation for Windows, built with **.NET 8 / WPF** and
 - **Drag & drop reorder** — drag a deck by its header to reorder tiles to any position.
 - **Playlists** — open/save decks as playlists (`File → Open/Save Playlist`), including layout, device and loop settings.
 - **Clear all decks** — stop all playback and reset every deck to a fresh empty state (decks and their order are kept).
+- **Deck views** — switch between the tiled deck layout and a compact stacked list from **View → List View**; the selection is remembered between launches.
 - **Appearance & layout** — light/dark/system themes, full screen (F11), zoom, and a deck finder (Ctrl+F).
 - **In-app auto-update** — a silent check against GitHub releases at launch, an update bubble + dialog, and a one-click update that swaps in the new build and relaunches (self-contained single-file `.exe`).
 

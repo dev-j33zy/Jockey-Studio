@@ -2,6 +2,16 @@
 
 All notable changes to Jockey Studio are documented here. Releases are published to GitHub, and the updater dialog shows each release's notes fetched from GitHub.
 
+## 0.2.5 — 2026-10-07
+
+Compact List View, more reliable seeking, and clearer deck controls.
+
+- **List View** — switch between tiled decks and compact stacked rows from the View menu; the choice is remembered. Rows include playback, seeking, metadata and deck controls, and can be reordered by dragging.
+- **More reliable seeking** — clicking either seeker jumps directly to the requested timestamp, even during active playback or repeated clicks. Seeking keeps the play/pause state unchanged; empty-deck seekers start at the left edge.
+- **List seeker hover time** — hovering the list seeker displays the timestamp at the pointer.
+- **Deck control tooltips** — tile-view Loop and Auto-mix buttons now identify themselves on hover.
+- **List layout refinements** — fixed the Remove button alignment and positioned metadata with the row controls.
+
 ## 0.2.4 — 2026-10-07
 
 Seeking during playback now follows the most recent click, and update notifications compare versions strictly.

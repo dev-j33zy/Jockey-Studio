@@ -158,7 +158,9 @@ public sealed class Deck
             return;
         }
 
-        double from = Status == PlaybackStatus.Ended ? 0 : PositionSecs;
+        double from = Status == PlaybackStatus.Ended && PositionSecs >= DurationSecs
+            ? 0
+            : PositionSecs;
         StartPlayback(from, stamp: true);
         if (Status == PlaybackStatus.Playing) return;
         // fall through: error already recorded
@@ -324,9 +326,20 @@ public sealed class Deck
         double target = Math.Clamp(secs, 0, Math.Max(0, DurationSecs));
         PositionSecs = target;
 
-        if (Status == PlaybackStatus.Playing)
+        if ((Status == PlaybackStatus.Playing || Status == PlaybackStatus.Paused)
+            && _player?.HasOutput == true)
         {
-            StartPlayback(target);
+            try
+            {
+                _player.SeekRuntime(target);
+            }
+            catch (Exception ex)
+            {
+                _loadGen++;
+                DisposePlayer();
+                Status = PlaybackStatus.Error;
+                Error = ex.Message;
+            }
         }
         else if (Status == PlaybackStatus.Loading)
         {
