@@ -22,20 +22,32 @@ public static class ChangeLog
     /// "What's new" page. Kept separate from the versioned history because it
     /// describes the in-development behavior of this build, not a shipped
     /// release.</summary>
-    public const string LatestTitle = "Compact List View and more reliable seeking";
+    public const string LatestTitle = "Auto-Play sequencing with Auto-mix compatibility";
 
     /// <summary>Explanation of the current build's headline change (moved here
     /// from the About page).</summary>
     public const string LatestSummary =
-        "Switch between tiled decks and compact stacked rows from the View menu; your choice is " +
-        "remembered, and rows can be reordered by dragging. Both seekers now jump directly to " +
-        "clicked timestamps during playback without changing play/pause state. The list seeker " +
-        "shows a hover timestamp, and tile Loop and Auto-mix controls identify themselves on hover.";
+        "Enable Auto-Play globally and select decks to advance to the next enabled deck when a " +
+        "track finishes. Auto-Play decks are excluded from Auto-mix ducking and automatic " +
+        "pause/resume. The master and per-deck controls report their current state in tooltips.";
 
     /// <summary>Versioned history, newest first. Sync source: CHANGELOG.md (the
     /// release notes published to GitHub and shown by the updater dialog).</summary>
     public static IReadOnlyList<ChangeLogEntry> Versions { get; } = new[]
     {
+        new ChangeLogEntry
+        {
+            Version = "0.2.6",
+            Title = "Auto-Play sequencing, Auto-mix compatibility, and clearer toggle controls",
+            Date = "2026-10-20",
+            Items = new[]
+            {
+                "Auto-Play sequencing — enable Auto-Play globally and mark individual decks to advance to the next enabled deck in order when a track finishes naturally. Deck order is respected; sequencing does not wrap after the last eligible deck.",
+                "Auto-Play and Auto-mix — decks marked for Auto-Play are excluded from Auto-mix ducking and auto-pause/resume, so Auto-mix cannot restart them after the active music ends.",
+                "Persistent Auto-Play settings — the global toggle is remembered between launches, and per-deck Auto-Play selections are saved with sessions and playlists.",
+                "State-aware Auto-Play tooltips — the top-bar toggle and deck controls in both tiled and List View report “Auto-Play Enabled” or “Auto-Play Disabled”.",
+            },
+        },
         new ChangeLogEntry
         {
             Version = "0.2.5",

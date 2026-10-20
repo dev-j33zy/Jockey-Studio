@@ -18,6 +18,14 @@
     <helpers:FormatTimeConverter x:Key="FmtTime"/>
     <helpers:FormatDurationConverter x:Key="FmtDuration"/>
     <helpers:RoundPercentToStringConverter x:Key="FmtPercent"/>
+    <Style x:Key="DeckAutoPlayButton" TargetType="Button" BasedOn="{StaticResource TbCtlIcon}">
+      <Setter Property="ToolTip" Value="Auto-Play Disabled"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding AutoPlay, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}" Value="True">
+          <Setter Property="ToolTip" Value="Auto-Play Enabled"/>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
 
     <!-- Blinking status dot for loading/playing decks -->
     <DataTemplate x:Key="StatusDotPlaying">
@@ -178,13 +186,20 @@
               <ColumnDefinition Width="*"/>
               <ColumnDefinition Width="*"/>
               <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <Button x:Name="LoopBtn" Grid.Column="0" Style="{StaticResource TbCtlIcon}" Margin="2,0"
                     ToolTip="Loop repeats" Click="LoopBtn_Click">
               <local:LoopBadgeControl Value="{Binding LoopMode, RelativeSource={RelativeSource AncestorType=local:TileCardControl}, FallbackValue=off}"/>
             </Button>
-            <Button x:Name="VolBtn" Grid.Column="1" Style="{StaticResource TbCtlIcon}" Margin="2,0" Click="VolBtn_Click">
+            <Button x:Name="AutoPlayBtn" Grid.Column="1" Style="{StaticResource DeckAutoPlayButton}" Margin="2,0"
+                    helpers:Ctl.IsActive="{Binding AutoPlay, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}"
+                    Click="AutoPlayBtn_Click">
+              <ContentControl Width="18" Height="18" Content="" ContentTemplate="{StaticResource IconAutoPlay}"
+                              Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+            </Button>
+            <Button x:Name="VolBtn" Grid.Column="2" Style="{StaticResource TbCtlIcon}" Margin="2,0" Click="VolBtn_Click">
               <Grid>
                 <ContentControl x:Name="VolumeIconShow" Width="18" Height="18" Content=""
                                 ContentTemplate="{StaticResource IconVolume}" Foreground="{DynamicResource TextDimBrush}"/>
@@ -193,13 +208,13 @@
                                 Visibility="Collapsed"/>
               </Grid>
             </Button>
-            <Button x:Name="AutoMixBtn" Grid.Column="2" Style="{StaticResource TbCtlIcon}" Margin="2,0"
+            <Button x:Name="AutoMixBtn" Grid.Column="3" Style="{StaticResource TbCtlIcon}" Margin="2,0"
                     ToolTip="Auto-mix" Click="AutoMixBtn_Click"
                     helpers:Ctl.IsEngaged="{Binding AutoMix, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}">
               <ContentControl Width="18" Height="18" Content="" ContentTemplate="{StaticResource IconShuffle}"
                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
             </Button>
-            <Button x:Name="DevBtn" Grid.Column="3" Style="{StaticResource TbCtlIcon}" Margin="2,0" Click="DevBtn_Click">
+            <Button x:Name="DevBtn" Grid.Column="4" Style="{StaticResource TbCtlIcon}" Margin="2,0" Click="DevBtn_Click">
               <ContentControl Width="18" Height="18" Content="" ContentTemplate="{StaticResource IconOutput}"
                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
             </Button>
@@ -325,6 +340,13 @@
               <Button x:Name="RowLoopBtn" Style="{StaticResource TbCtlIcon}" Width="36" Height="36"
                       Margin="0,0,2,0" ToolTip="Loop repeats" Click="LoopBtn_Click">
                 <local:LoopBadgeControl Value="{Binding LoopMode, RelativeSource={RelativeSource AncestorType=local:TileCardControl}, FallbackValue=off}"/>
+              </Button>
+              <Button x:Name="RowAutoPlayBtn" Style="{StaticResource DeckAutoPlayButton}" Width="36" Height="36"
+                      Margin="0,0,2,0"
+                      helpers:Ctl.IsActive="{Binding AutoPlay, RelativeSource={RelativeSource AncestorType=local:TileCardControl}}"
+                      Click="AutoPlayBtn_Click">
+                <ContentControl Width="18" Height="18" Content="" ContentTemplate="{StaticResource IconAutoPlay}"
+                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
               </Button>
               <Button x:Name="RowVolBtn" Style="{StaticResource TbCtlIcon}" Width="36" Height="36"
                       Margin="0,0,2,0" ToolTip="Volume" Click="VolBtn_Click">

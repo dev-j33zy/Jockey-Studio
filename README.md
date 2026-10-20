@@ -7,13 +7,15 @@ Multi-deck audio mixing workstation for Windows, built with **.NET 8 / WPF** and
 - **Multiple persistent decks** — every deck has its own volume, mute, loop repeats (off / endless / 2×–5×), output device and fade settings; the full layout is saved between sessions.
 - **Native device routing** — a default output device can be set in Settings (System Default or any device); every deck follows it unless you pick a specific output on the deck, and per-deck picks persist until the deck is removed.
 - **Per-deck fades** — adjustable fade-in/out (seconds) applied on the next play.
-- **Auto-mix (vMix group style)** — per-deck on/off. While a deck's signal is above the gate, it ducks every OTHER deck that also has auto-mix engaged; once it stays below the gate for the hold time, the others ramp back up. Decks without auto-mix are never touched. Timing is configurable (seconds, decimal precision).
+- **Auto-mix (vMix group style)** — per-deck on/off. While a deck's signal is above the gate, it ducks every OTHER deck that also has auto-mix engaged; once it stays below the gate for the hold time, the others ramp back up. Decks without auto-mix or with Auto-Play enabled are never touched. Timing is configurable (seconds, decimal precision).
 - **Live loop switching** — changing a deck's loop mode while it plays applies immediately in place; the current playthrough becomes #1 of the new selection, no pipeline restart.
 - **Media library** — a sliding drawer on the right lists your library for one-click loading; dropping files onto a deck loads them too.
 - **Drag & drop reorder** — drag a deck by its header to reorder tiles to any position.
-- **Playlists** — open/save decks as playlists (`File → Open/Save Playlist`), including layout, device and loop settings.
+- **Playlists** — open/save decks as playlists (`File → Open/Save Playlist`), including layout, device, loop and per-deck Auto-Play settings.
 - **Clear all decks** — stop all playback and reset every deck to a fresh empty state (decks and their order are kept).
 - **Deck views** — switch between the tiled deck layout and a compact stacked list from **View → List View**; the selection is remembered between launches.
+- **Auto-Play** — enable the top-bar toggle, then mark individual decks with their Auto-Play button. When a deck finishes naturally, the next enabled deck in deck order starts automatically; sequencing does not wrap after the last eligible deck. The global setting persists between launches and per-deck settings persist with sessions and playlists. Tooltips show whether each toggle is enabled or disabled.
+- **Auto-Play and Auto-mix** — Auto-Play decks are excluded from Auto-mix ducking and automatic pause/resume, so Auto-mix cannot restart them after another deck ends.
 - **Appearance & layout** — light/dark/system themes, full screen (F11), zoom, and a deck finder (Ctrl+F).
 - **In-app auto-update** — a silent check against GitHub releases at launch, an update bubble + dialog, and a one-click update that swaps in the new build and relaunches (self-contained single-file `.exe`).
 
@@ -36,7 +38,7 @@ dotnet publish src-wpf\JockeyStudio.Wpf\JockeyStudio.Wpf.csproj -c Release -r wi
   --self-contained true -p:PublishSingleFile=true `
   -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
   -p:DebugType=None -p:DebugSymbols=false -o publish_out
-iscc /DAppVersion=0.2.4 /DPublishDir=publish_out /DOutputDir=artifacts installer\jockeystudio.iss
+iscc /DAppVersion=0.2.6 /DPublishDir=publish_out /DOutputDir=artifacts installer\jockeystudio.iss
 ```
 
 The setup lands in `artifacts\`. `installer/jockeystudio.iss` is the single source of truth for the install layout, shortcuts and the installer name the updater looks for.

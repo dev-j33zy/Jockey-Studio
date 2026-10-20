@@ -21,6 +21,22 @@
     </Viewbox>
   </DataTemplate>
 
+  <!-- Auto-play: an A-shaped play symbol. -->
+  <DataTemplate x:Key="IconAutoPlay">
+    <Viewbox Stretch="Uniform">
+      <Grid Width="24" Height="24">
+        <Path Data="M3,20 L11,4 L19,20 M6.5,13 L12.5,13"
+              Fill="Transparent"
+              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentControl}}"
+              StrokeThickness="2" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+        <Path Data="M12,10 L17,13 L12,16 Z"
+              Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentControl}}"
+              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentControl}}"
+              StrokeThickness="1" StrokeLineJoin="Round"/>
+      </Grid>
+    </Viewbox>
+  </DataTemplate>
+
   <!-- Pause: two rounded rects (6,4,4,16) and (14,4,4,16) rx=1 -->
   <DataTemplate x:Key="IconPause">
     <Viewbox Stretch="Uniform">

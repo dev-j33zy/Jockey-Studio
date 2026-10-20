@@ -2,6 +2,15 @@
 
 All notable changes to Jockey Studio are documented here. Releases are published to GitHub, and the updater dialog shows each release's notes fetched from GitHub.
 
+## 0.2.6 — 2026-10-20
+
+Auto-Play sequencing, Auto-mix compatibility, and clearer toggle controls.
+
+- **Auto-Play sequencing** — enable Auto-Play globally and mark individual decks to advance to the next enabled deck in order when a track finishes naturally. Deck order is respected; sequencing does not wrap after the last eligible deck.
+- **Auto-Play and Auto-mix** — decks marked for Auto-Play are excluded from Auto-mix ducking and auto-pause/resume, so Auto-mix cannot restart them after the active music ends.
+- **Persistent Auto-Play settings** — the global toggle is remembered between launches, and per-deck Auto-Play selections are saved with sessions and playlists.
+- **State-aware Auto-Play tooltips** — the top-bar toggle and deck controls in both tiled and List View report “Auto-Play Enabled” or “Auto-Play Disabled”.
+
 ## 0.2.5 — 2026-10-07
 
 Compact List View, more reliable seeking, and clearer deck controls.

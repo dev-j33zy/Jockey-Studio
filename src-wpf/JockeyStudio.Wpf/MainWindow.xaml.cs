@@ -102,6 +102,8 @@ public partial class MainWindow : Window
 
         TopBar.AddDeckClicked += (_, _) => AddDeck();
         TopBar.LibraryToggled += (_, _) => ToggleLibrary();
+        TopBar.IsAutoPlayEnabled = AppPrefs.AutoPlayEnabled;
+        TopBar.AutoPlayToggled += (_, _) => AppPrefs.SetAutoPlayEnabled(TopBar.IsAutoPlayEnabled);
 
         LibraryDrawer.CloseClicked += (_, _) => CloseLibrary();
         LibraryDrawer.LoadRequested += OnLibraryLoad;
@@ -129,6 +131,7 @@ public partial class MainWindow : Window
         var persisted = StatePersistence.Load();
         if (persisted != null) _engine.Restore(persisted);
         else _engine.AddDecks(4);
+        _engine.DeckPlaybackEnded += OnDeckPlaybackEnded;
         RebuildDecks();
         RefreshLibrary();
 
@@ -474,6 +477,32 @@ public partial class MainWindow : Window
         {
             card.SetDeviceList(devices, defaultLabel);
             card.UpdateFromDeck();
+        }
+    }
+
+    private void OnDeckPlaybackEnded(Deck endedDeck)
+    {
+        if (!TopBar.IsAutoPlayEnabled) return;
+
+        var decks = _engine.Decks;
+        int endedIndex = -1;
+        for (int i = 0; i < decks.Count; i++)
+        {
+            if (ReferenceEquals(decks[i], endedDeck))
+            {
+                endedIndex = i;
+                break;
+            }
+        }
+
+        for (int i = endedIndex + 1; i < decks.Count; i++)
+        {
+            Deck candidate = decks[i];
+            if (!candidate.AutoPlay || !candidate.HasMedia) continue;
+            if (candidate.Status is PlaybackStatus.Playing or PlaybackStatus.Loading) continue;
+
+            candidate.Play();
+            if (candidate.Status is PlaybackStatus.Playing or PlaybackStatus.Loading) break;
         }
     }
 

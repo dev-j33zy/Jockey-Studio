@@ -3,6 +3,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:helpers="clr-namespace:JockeyStudio.Wpf.Helpers"
              xmlns:local="clr-namespace:JockeyStudio.Wpf.Controls">
+  <UserControl.Resources>
+    <Style x:Key="AutoPlayToggleButton" TargetType="Button" BasedOn="{StaticResource TbCtlIcon}">
+      <Setter Property="ToolTip" Value="Auto-Play Disabled"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsAutoPlayEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+          <Setter Property="ToolTip" Value="Auto-Play Enabled"/>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+  </UserControl.Resources>
   <Border Background="{DynamicResource PanelBrush}"
           BorderBrush="{DynamicResource BorderBrush}"
           BorderThickness="0,0,0,1"
@@ -33,6 +43,13 @@
                 Click="AddDeckButton_Click">
           <ContentControl Width="22" Height="22" Content=""
                           ContentTemplate="{StaticResource IconPlus}"
+                          Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+        </Button>
+        <Button x:Name="AutoPlayButton" Style="{StaticResource AutoPlayToggleButton}" Margin="8,0,0,0"
+                helpers:Ctl.IsActive="{Binding IsAutoPlayEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                Click="AutoPlayButton_Click">
+          <ContentControl Width="22" Height="22" Content=""
+                          ContentTemplate="{StaticResource IconAutoPlay}"
                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
         </Button>
         <Button x:Name="LibraryButton" Style="{StaticResource TbCtlIcon}" Margin="8,0,0,0"

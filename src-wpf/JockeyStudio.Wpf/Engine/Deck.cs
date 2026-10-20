@@ -35,6 +35,7 @@ public sealed class Deck
     public float Volume { get; private set; } = 0.9f;
     public bool Muted { get; private set; }
     public string LoopMode { get; private set; } = "off";
+    public bool AutoPlay { get; private set; }
     public FadesConfig Fades { get; private set; } = new();
     public string DeviceId { get; private set; } = DEFAULT_DEVICE_ID;
 
@@ -395,6 +396,13 @@ public sealed class Deck
         // glitch); the in-place change keeps the media going uninterrupted and
         // counts the current playthrough as playthrough 1 of the selection.
         if (_player != null) _player.SetLoopMode(mode);
+        StateChanged?.Invoke(this);
+    }
+
+    public void SetAutoPlay(bool enabled)
+    {
+        if (AutoPlay == enabled) return;
+        AutoPlay = enabled;
         StateChanged?.Invoke(this);
     }
 

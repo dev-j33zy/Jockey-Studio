@@ -165,6 +165,15 @@ public partial class TileCardControl : UserControl
         set => SetValue(AutoMixProperty, value);
     }
 
+    public static readonly DependencyProperty AutoPlayProperty = DependencyProperty.Register(
+        nameof(AutoPlay), typeof(bool), typeof(TileCardControl), new PropertyMetadata(false));
+
+    public bool AutoPlay
+    {
+        get => (bool)GetValue(AutoPlayProperty);
+        set => SetValue(AutoPlayProperty, value);
+    }
+
     /// <summary>True while this card is the window's focused deck (the target
     /// for the Edit menu's Cut/Copy/Paste) — drives the accent ring.</summary>
     public static readonly DependencyProperty IsSelectedProperty = DependencyProperty.Register(
@@ -373,6 +382,7 @@ public partial class TileCardControl : UserControl
             IsMuted = _deck.Muted;
             LoopMode = _deck.LoopMode;
             AutoMix = _deck.Fades.AutoMix;
+            AutoPlay = _deck.AutoPlay;
             DeviceLabel = DefaultDeviceName();
             DevBtn.ToolTip = _deck.DeviceId == EngineConst.DEFAULT_DEVICE_ID
                 ? $"Output: Default ({_defaultDeviceLabel})"
@@ -656,6 +666,11 @@ public partial class TileCardControl : UserControl
     private void VolBtn_Click(object sender, RoutedEventArgs e) => TogglePopup("vol");
     private void DevBtn_Click(object sender, RoutedEventArgs e) => TogglePopup("dev");
     private void LoopBtn_Click(object sender, RoutedEventArgs e) => TogglePopup("loop");
+    private void AutoPlayBtn_Click(object sender, RoutedEventArgs e)
+    {
+        _deck?.SetAutoPlay(!AutoPlay);
+        SyncImmediate();
+    }
 
     private void MuteBtn_Click(object sender, RoutedEventArgs e)
     {

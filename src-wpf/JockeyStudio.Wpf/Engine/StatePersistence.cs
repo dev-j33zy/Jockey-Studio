@@ -14,6 +14,7 @@ public sealed class PersistedTile
     public float Volume { get; set; } = 0.9f;
     public bool Muted { get; set; }
     public string LoopMode { get; set; } = "off";
+    public bool AutoPlay { get; set; }
     public FadesConfig Fades { get; set; } = new();
 }
 

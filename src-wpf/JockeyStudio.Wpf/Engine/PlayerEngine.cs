@@ -40,6 +40,7 @@ public sealed class PlayerEngine : IDisposable
     /// (deck added/removed/reordered, media imported/loaded, settings or any
     /// per-deck control). The shell debounces this into a disk save.</summary>
     public event Action? Changed;
+    public event Action<Deck>? DeckPlaybackEnded;
 
     private bool _restoring;
 
@@ -195,6 +196,7 @@ public sealed class PlayerEngine : IDisposable
                 Volume = d.Volume,
                 Muted = d.Muted,
                 LoopMode = d.LoopMode,
+                AutoPlay = d.AutoPlay,
                 Fades = d.Fades.Clone(),
             }).ToList(),
             Media = _media.Select(CloneMedia).ToList(),
@@ -265,6 +267,7 @@ public sealed class PlayerEngine : IDisposable
                 deck.SetMuted(pt.Muted);
                 deck.SetDevice(pt.DeviceId);
                 deck.SetLoop(pt.LoopMode);
+                deck.SetAutoPlay(pt.AutoPlay);
                 deck.SetFades(pt.Fades);
                 byId[pt.Id] = deck;
             }
@@ -408,7 +411,11 @@ public sealed class PlayerEngine : IDisposable
             }
             deck.RefreshProgress();
         }
-        foreach (var deck in ended) deck.MarkEnded();
+        foreach (var deck in ended)
+        {
+            deck.MarkEnded();
+            DeckPlaybackEnded?.Invoke(deck);
+        }
 
         ReconcileAutomix();
     }
@@ -453,7 +460,7 @@ public sealed class PlayerEngine : IDisposable
         {
             foreach (var deck in _decks)
             {
-                if (!deck.Fades.AutoMix || deck.Muted) continue;
+                if (!deck.Fades.AutoMix || deck.Muted || deck.AutoPlay) continue;
                 if (!(deck.IsPlaying || deck.AutoMixHeldPaused)) continue;
                 if (winner == null || deck.AutoMixSeq > winner.AutoMixSeq) winner = deck;
             }
@@ -464,7 +471,25 @@ public sealed class PlayerEngine : IDisposable
             deck.DuckFactor = duckFactor;
             float baseGain = deck.Muted ? 0f : deck.Volume;
             bool automixCandidate = _settings.AutoMixEnabled && deck.Fades.AutoMix
-                && !deck.Muted && (deck.IsPlaying || deck.AutoMixHeldPaused);
+                && !deck.Muted && !deck.AutoPlay && (deck.IsPlaying || deck.AutoMixHeldPaused);
+
+            if (deck.AutoPlay)
+            {
+                deck.AutoMixDucked = false;
+                if (deck.AutoMixHeldPaused)
+                {
+                    // Auto-Play decks are outside automix; don't let a prior
+                    // automix hold resume this deck when the active deck ends.
+                    deck.AutoMixHeldPaused = false;
+                    deck.Gain = baseGain;
+                    deck.Ramping = false;
+                }
+                else
+                {
+                    RampTo(deck, baseGain, releaseRate);
+                }
+                continue;
+            }
 
             if (winner == null || ReferenceEquals(deck, winner))
             {

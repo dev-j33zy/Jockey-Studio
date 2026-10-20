@@ -7,6 +7,18 @@ namespace JockeyStudio.Wpf.Controls;
 /// events; the host window wires drawer/window visibility.</summary>
 public partial class TopBarControl : UserControl
 {
+    public static readonly DependencyProperty IsAutoPlayEnabledProperty = DependencyProperty.Register(
+        nameof(IsAutoPlayEnabled),
+        typeof(bool),
+        typeof(TopBarControl),
+        new PropertyMetadata(false));
+
+    public bool IsAutoPlayEnabled
+    {
+        get => (bool)GetValue(IsAutoPlayEnabledProperty);
+        set => SetValue(IsAutoPlayEnabledProperty, value);
+    }
+
     public static readonly DependencyProperty IsLibraryOpenProperty = DependencyProperty.Register(
         nameof(IsLibraryOpen),
         typeof(bool),
@@ -22,6 +34,7 @@ public partial class TopBarControl : UserControl
     /// <summary>Raised by the "New Deck" (plus) button; the host window adds a deck.</summary>
     public event RoutedEventHandler? AddDeckClicked;
     public event RoutedEventHandler? LibraryToggled;
+    public event RoutedEventHandler? AutoPlayToggled;
 
     public TopBarControl()
     {
@@ -33,4 +46,10 @@ public partial class TopBarControl : UserControl
 
     private void LibraryButton_Click(object sender, RoutedEventArgs e)
         => LibraryToggled?.Invoke(this, e);
+
+    private void AutoPlayButton_Click(object sender, RoutedEventArgs e)
+    {
+        IsAutoPlayEnabled = !IsAutoPlayEnabled;
+        AutoPlayToggled?.Invoke(this, e);
+    }
 }
