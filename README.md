@@ -16,6 +16,9 @@ Multi-deck audio mixing workstation for Windows, built with **.NET 8 / WPF** and
 - **Deck views** — switch between the tiled deck layout and a compact stacked list from **View → List View**; the selection is remembered between launches.
 - **Auto-Play** — enable the top-bar toggle, then mark individual decks with their Auto-Play button. When a deck finishes naturally, the next enabled deck in deck order starts automatically; sequencing does not wrap after the last eligible deck. The global setting persists between launches and per-deck settings persist with sessions and playlists. Tooltips show whether each toggle is enabled or disabled.
 - **Auto-Play and Auto-mix** — Auto-Play decks are excluded from Auto-mix ducking and automatic pause/resume, so Auto-mix cannot restart them after another deck ends.
+- **Responsive seeking** — timestamp jumps flush pending output and reset the resampler, preventing notes from the old playhead position from playing after a seek. Seeking while paused keeps playback paused.
+- **Smooth, low-latency volume control** — the audio output buffer is tuned for responsive fader changes, with a short gain ramp to avoid abrupt volume steps.
+- **Adaptive in-window controls** — Loop, Volume and Output Device dropdowns flip above or below their deck controls to stay visible within the scroll area.
 - **Appearance & layout** — light/dark/system themes, full screen (F11), zoom, and a deck finder (Ctrl+F).
 - **In-app auto-update** — a silent check against GitHub releases at launch, an update bubble + dialog, and a one-click update that swaps in the new build and relaunches (self-contained single-file `.exe`).
 
@@ -38,7 +41,7 @@ dotnet publish src-wpf\JockeyStudio.Wpf\JockeyStudio.Wpf.csproj -c Release -r wi
   --self-contained true -p:PublishSingleFile=true `
   -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
   -p:DebugType=None -p:DebugSymbols=false -o publish_out
-iscc /DAppVersion=0.2.6 /DPublishDir=publish_out /DOutputDir=artifacts installer\jockeystudio.iss
+iscc /DAppVersion=0.2.7 /DPublishDir=publish_out /DOutputDir=artifacts installer\jockeystudio.iss
 ```
 
 The setup lands in `artifacts\`. `installer/jockeystudio.iss` is the single source of truth for the install layout, shortcuts and the installer name the updater looks for.

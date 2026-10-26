@@ -10,7 +10,8 @@
         Background="{DynamicResource BgBrush}"
         Foreground="{DynamicResource TextBrush}"
         FontFamily="{StaticResource AppFontFamily}"
-        FontSize="14">
+        FontSize="14"
+        PreviewMouseDown="Window_PreviewMouseDown">
 
   <Window.CommandBindings>
     <CommandBinding Command="Open" Executed="MenuOpenFile_Executed" CanExecute="MenuCommand_CanExecute"/>

@@ -1,9 +1,8 @@
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using JockeyStudio.Wpf;
@@ -208,8 +207,11 @@ public partial class TileCardControl : UserControl
     private string _defaultDeviceLabel = "System Default";
     private bool _updating;
     private bool _seeking;
-    private double _lastSeekTarget = double.NaN;
     private bool _isListView;
+    private FrameworkElement? _openPopupPanel;
+    private FrameworkElement? _popupTarget;
+    private AdornerLayer? _popupAdornerLayer;
+    private DeckDropdownAdorner? _popupAdorner;
 
     public bool IsListView
     {
@@ -223,6 +225,83 @@ public partial class TileCardControl : UserControl
             RowBorder.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
             MinWidth = value ? 0 : 320;
             MinHeight = value ? 78 : 320;
+        }
+    }
+
+    internal sealed class DeckDropdownAdorner : Adorner
+    {
+        private readonly VisualCollection _visuals;
+        private readonly FrameworkElement _panel;
+        private readonly FrameworkElement _target;
+        private readonly FrameworkElement _placementArea;
+        private readonly double _horizontalOffset;
+        private readonly double _verticalOffset;
+
+        public DeckDropdownAdorner(
+            UIElement adornedElement,
+            FrameworkElement panel,
+            FrameworkElement target,
+            double horizontalOffset,
+            double verticalOffset)
+            : base(adornedElement)
+        {
+            _panel = panel;
+            _target = target;
+            _horizontalOffset = horizontalOffset;
+            _verticalOffset = verticalOffset;
+            var window = Window.GetWindow(adornedElement);
+            var windowContent = window?.Content as FrameworkElement
+                ?? throw new InvalidOperationException("The deck dropdown window content is unavailable.");
+            _placementArea = window is MainWindow mainWindow
+                ? mainWindow.ScrollHost
+                : windowContent;
+            _visuals = new VisualCollection(this) { panel };
+            IsHitTestVisible = true;
+        }
+
+        protected override int VisualChildrenCount => _visuals.Count;
+
+        protected override Visual GetVisualChild(int index) => _visuals[index];
+
+        public void DetachPanel() => _visuals.Remove(_panel);
+
+        protected override Size MeasureOverride(Size constraint)
+        {
+            _panel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            return AdornedElement.RenderSize;
+        }
+
+        protected override Size ArrangeOverride(Size finalSize)
+        {
+            Size panelSize = _panel.DesiredSize;
+            Rect targetBounds = _target.TransformToAncestor(AdornedElement)
+                .TransformBounds(new Rect(_target.RenderSize));
+            double x = targetBounds.Left + _horizontalOffset;
+            const double margin = 8;
+            Rect areaBounds = _placementArea.TransformToDescendant(AdornedElement)
+                .TransformBounds(new Rect(_placementArea.RenderSize));
+            double left = areaBounds.Left + margin;
+            double right = areaBounds.Right - margin;
+            double top = areaBounds.Top + margin;
+            double bottom = areaBounds.Bottom - margin;
+            x = right - panelSize.Width >= left
+                ? Math.Clamp(x, left, right - panelSize.Width)
+                : left;
+
+            double gap = Math.Abs(_verticalOffset);
+            double aboveSpace = targetBounds.Top - top - gap;
+            double belowSpace = bottom - targetBounds.Bottom - gap;
+            bool fitsAbove = aboveSpace >= panelSize.Height;
+            bool fitsBelow = belowSpace >= panelSize.Height;
+            bool placeAbove = fitsAbove || (!fitsBelow && aboveSpace > belowSpace);
+            double y = placeAbove
+                ? targetBounds.Top - panelSize.Height - gap
+                : targetBounds.Bottom + gap;
+            double maxY = bottom - panelSize.Height;
+            y = maxY >= top ? Math.Clamp(y, top, maxY) : top;
+
+            _panel.Arrange(new Rect(new Point(x, y), panelSize));
+            return finalSize;
         }
     }
 
@@ -278,25 +357,20 @@ public partial class TileCardControl : UserControl
         UpdateVolumeTooltip();
         Seek.PreviewMouseMove += Seek_PreviewMouseMove;
         Seek.MouseLeave += Seek_MouseLeave;
-        Seek.ValueChanged += Seek_ValueChanged;
         Seek.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
             new MouseButtonEventHandler(Seek_PreviewMouseLeftButtonDown), true);
         Seek.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent,
             new MouseButtonEventHandler(Seek_PreviewMouseLeftButtonUp), true);
         RowSeek.PreviewMouseMove += Seek_PreviewMouseMove;
         RowSeek.MouseLeave += Seek_MouseLeave;
-        RowSeek.ValueChanged += Seek_ValueChanged;
         RowSeek.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
             new MouseButtonEventHandler(Seek_PreviewMouseLeftButtonDown), true);
         RowSeek.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent,
             new MouseButtonEventHandler(Seek_PreviewMouseLeftButtonUp), true);
         VolumeSlider.ValueChanged += VolumeSlider_ValueChanged;
         VolumeSlider.PreviewMouseLeftButtonDown += VolumeSlider_PreviewMouseLeftButtonDown;
-        VolumeSlider.MouseWheel += VolumeSlider_MouseWheel;
+        VolumeSlider.PreviewMouseWheel += VolumeSlider_PreviewMouseWheel;
         PopupVeil.MouseDown += PopupVeil_MouseDown;
-        VolumePopup.Opened += Popup_Opened;
-        DevicePopup.Opened += Popup_Opened;
-        LoopPopup.Opened += Popup_Opened;
     }
 
     // ---------------- tile reorder drag ----------------
@@ -311,6 +385,7 @@ public partial class TileCardControl : UserControl
 
     private void RowBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (RowPopupVeil.Visibility == Visibility.Visible) return;
         if (RowSeek.IsMouseOver) return;
         if (e.OriginalSource is DependencyObject source && IsInsideRowControl(source)) return;
         RaiseEvent(new RoutedEventArgs(ReorderDragRequestedEvent, this));
@@ -492,9 +567,20 @@ public partial class TileCardControl : UserControl
 
     private void ClosePopups()
     {
-        VolumePopup.IsOpen = false;
-        DevicePopup.IsOpen = false;
-        LoopPopup.IsOpen = false;
+        if (_popupAdorner != null && _popupAdornerLayer != null)
+        {
+            _popupAdornerLayer.Remove(_popupAdorner);
+            _popupAdorner.DetachPanel();
+        }
+        if (_openPopupPanel != null)
+        {
+            _openPopupPanel.Visibility = Visibility.Collapsed;
+            PopupTemplates.Children.Add(_openPopupPanel);
+        }
+        _popupAdorner = null;
+        _popupAdornerLayer = null;
+        _openPopupPanel = null;
+        _popupTarget = null;
         PopupVeil.Visibility = Visibility.Collapsed;
         RowPopupVeil.Visibility = Visibility.Collapsed;
         _openPopup = null;
@@ -517,33 +603,47 @@ public partial class TileCardControl : UserControl
             return;
         }
         CloseAllPopupsEverywhere();
-        _openPopup = kind;
         PopupVeil.Visibility = Visibility.Visible;
         RowPopupVeil.Visibility = Visibility.Visible;
         switch (kind)
         {
             case "vol":
-                VolumePopup.PlacementTarget = IsListView ? RowVolBtn : VolBtn;
-                VolumePopup.IsOpen = true;
+                _openPopup = kind;
+                ShowPopup(VolumePopup, IsListView ? RowVolBtn : VolBtn, -40);
                 Ctl.SetIsPopupOpen(VolBtn, true);
                 Ctl.SetIsPopupOpen(RowVolBtn, true);
                 break;
             case "dev":
                 DeviceListNeedsRefresh?.Invoke();
                 RebuildDeviceList();
-                DevicePopup.PlacementTarget = IsListView ? RowDevBtn : DevBtn;
-                DevicePopup.IsOpen = true;
+                _openPopup = kind;
+                ShowPopup(DevicePopup, IsListView ? RowDevBtn : DevBtn, -268);
                 Ctl.SetIsPopupOpen(DevBtn, true);
                 Ctl.SetIsPopupOpen(RowDevBtn, true);
                 break;
             case "loop":
-                LoopPopup.PlacementTarget = IsListView ? RowLoopBtn : LoopBtn;
-                LoopPopup.IsOpen = true;
+                _openPopup = kind;
+                ShowPopup(LoopPopup, IsListView ? RowLoopBtn : LoopBtn, 0);
                 Ctl.SetIsPopupOpen(LoopBtn, true);
                 Ctl.SetIsPopupOpen(RowLoopBtn, true);
                 break;
         }
         UpdateVolumeTooltip();
+    }
+
+    private void ShowPopup(Border panel, FrameworkElement target, double horizontalOffset)
+    {
+        _popupAdornerLayer = AdornerLayer.GetAdornerLayer(this)
+            ?? throw new InvalidOperationException("The deck dropdown adorner layer is unavailable.");
+        PopupTemplates.Children.Remove(panel);
+        panel.Visibility = Visibility.Visible;
+        panel.DataContext = this;
+        _openPopupPanel = panel;
+        _popupTarget = target;
+        _popupAdorner = new DeckDropdownAdorner(this, panel, target, horizontalOffset, -10);
+        _popupAdornerLayer.Add(_popupAdorner);
+        _popupAdorner.InvalidateMeasure();
+        _popupAdorner.InvalidateArrange();
     }
 
     /// <summary>Hover text for the volume button: the level the deck is playing
@@ -568,91 +668,41 @@ public partial class TileCardControl : UserControl
     private void PopupVeil_MouseDown(object sender, MouseButtonEventArgs e)
         => ClosePopups();
 
-    // Keep popups inside the app window's client area so an unfocused window
-    // never lets them spill over other apps.
-    private void Popup_Opened(object? sender, EventArgs e)
+    public void RefreshOpenPopupPosition()
     {
-        var popup = (Popup)sender!;
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+        if (_popupAdorner == null || _popupTarget == null) return;
+        if (!IsPopupTargetVisible(_popupTarget))
         {
-            ClampPopup(popup);
-            MakePopupClickTransparentToActivation(popup);
-        }));
+            ClosePopups();
+            return;
+        }
+        _popupAdorner.InvalidateArrange();
     }
 
-    // The popup is a separate top-level window. Without WS_EX_NOACTIVATE,
-    // clicking inside it activates the popup and deactivates this window, which
-    // triggers the MainWindow's Deactivated handler and closes the popup while
-    // the user is still using it. With the flag set, clicks still work but the
-    // popup never steals activation, so it only closes when the app truly
-    // loses focus to another application.
-    private static void MakePopupClickTransparentToActivation(Popup popup)
+    private bool IsPopupTargetVisible(FrameworkElement? target)
     {
-        if (popup.Child is not Visual visual) return;
-        if (PresentationSource.FromVisual(visual) is not HwndSource src || src.Handle == IntPtr.Zero) return;
-        const int gwlExStyle = -20;
-        const int wsExNoActivate = 0x08000000;
-        int ex = GetWindowLong(src.Handle, gwlExStyle);
-        if ((ex & wsExNoActivate) == 0) SetWindowLong(src.Handle, gwlExStyle, ex | wsExNoActivate);
+        if (target == null || !target.IsVisible
+            || Window.GetWindow(this) is not MainWindow window
+            || window.ScrollHost.ViewportWidth <= 0 || window.ScrollHost.ViewportHeight <= 0)
+        {
+            return false;
+        }
+
+        Rect targetBounds = target.TransformToAncestor(window.ScrollHost)
+            .TransformBounds(new Rect(target.RenderSize));
+        var viewport = new Rect(0, 0, window.ScrollHost.ViewportWidth, window.ScrollHost.ViewportHeight);
+        return viewport.IntersectsWith(targetBounds);
     }
 
-    [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
-    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-    [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
-    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-    // The popup window's transparent pixels (e.g. the margins around the thin
-    // volume fader) let mouse-downs pass through to the main window and reach
-    // Window_PreviewMouseDown. Before the main window closes the popups, it asks
-    // whether the pointer is over an open popup and treats the click as intended
-    // for that popup instead of as a "close on empty area" click.
+    // Let window-level outside-click dismissal distinguish the dropdown itself
+    // from the deck underneath it.
     public bool IsPointOverOpenPopup(Point screenPoint)
     {
-        foreach (var popup in new[] { VolumePopup, DevicePopup, LoopPopup })
-        {
-            if (!popup.IsOpen || popup.Child is not Visual v) continue;
-            if (PresentationSource.FromVisual(v) is not HwndSource src || src.Handle == IntPtr.Zero) continue;
-            RECT r;
-            if (!GetWindowRect(src.Handle, out r)) continue;
-            if (screenPoint.X >= r.L && screenPoint.X <= r.R
-                && screenPoint.Y >= r.T && screenPoint.Y <= r.B) return true;
-        }
-        return false;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct RECT { public int L, T, R, B; }
-
-    [DllImport("user32.dll")]
-    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-    private void ClampPopup(Popup popup)
-    {
-        if (popup.Child is not FrameworkElement child
-            || child.ActualWidth <= 0 || child.ActualHeight <= 0) return;
-        var win = Window.GetWindow(this);
-        if (win?.Content is not FrameworkElement content
-            || content.ActualWidth <= 0 || content.ActualHeight <= 0) return;
-
-        var tl = child.PointToScreen(new Point(0, 0));
-        var client = content.PointToScreen(new Point(0, 0));
-        const double margin = 8;
-        double minL = client.X + margin, minT = client.Y + margin;
-        double maxL = client.X + content.ActualWidth - child.ActualWidth - margin;
-        double maxT = client.Y + content.ActualHeight - child.ActualHeight - margin;
-
-        double dx = 0, dy = 0;
-        if (tl.X < minL) dx = minL - tl.X;
-        else if (tl.X > maxL && maxL > minL) dx = maxL - tl.X;
-        if (tl.Y < minT) dy = minT - tl.Y;
-        else if (tl.Y > maxT && maxT > minT) dy = maxT - tl.Y;
-
-        if (dx != 0 || dy != 0)
-        {
-            popup.HorizontalOffset += dx;
-            popup.VerticalOffset += dy;
-        }
+        if (_openPopupPanel == null || !_openPopupPanel.IsVisible
+            || PresentationSource.FromVisual(_openPopupPanel) == null)
+            return false;
+        Point local = _openPopupPanel.PointFromScreen(screenPoint);
+        return new Rect(_openPopupPanel.RenderSize).Contains(local);
     }
 
     // ---------------- click wiring (engine-backed) ----------------
@@ -757,30 +807,20 @@ public partial class TileCardControl : UserControl
         _deck.SetVolumeEffective((float)e.NewValue);
     }
 
-    private void VolumeSlider_MouseWheel(object sender, MouseWheelEventArgs e)
+    private void VolumeSlider_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        // Scroll-wheel adjusts the fader (wheel up raises). Handled so the
-        // wheel doesn't also scroll the popup behind it.
+        // Apply each wheel delta directly to the fader and keep it from
+        // bubbling to a containing scroll viewer.
         e.Handled = true;
         double step = VolumeSlider.SmallChange > 0 ? VolumeSlider.SmallChange : 0.05;
-        double value = VolumeSlider.Value + (e.Delta > 0 ? step : -step);
+        double value = VolumeSlider.Value + step * e.Delta / Mouse.MouseWheelDeltaForOneLine;
         VolumeSlider.Value = Math.Clamp(value, VolumeSlider.Minimum, VolumeSlider.Maximum);
-    }
-
-    private void Seek_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_updating || _deck == null || !_seeking) return;
-        double target = ((Slider)sender).Value;
-        if (!double.IsNaN(_lastSeekTarget) && Math.Abs(target - _lastSeekTarget) < 0.001) return;
-        _lastSeekTarget = target;
-        _deck.Seek(target);
     }
 
     private void Seek_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (sender is not Slider slider) return;
         _seeking = true;
-        _lastSeekTarget = double.NaN;
         if (!IsInsideSliderThumb(slider, e.OriginalSource as DependencyObject))
         {
             SeekToPointerPosition(slider, e);
@@ -791,12 +831,7 @@ public partial class TileCardControl : UserControl
     private void Seek_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         _seeking = false;
-        double target = ((Slider)sender).Value;
-        if (_deck != null && (double.IsNaN(_lastSeekTarget) || Math.Abs(target - _lastSeekTarget) >= 0.001))
-        {
-            _deck.Seek(target);
-        }
-        _lastSeekTarget = double.NaN;
+        if (_deck != null) _deck.Seek(((Slider)sender).Value);
     }
 
     private void SeekToPointerPosition(Slider slider, MouseButtonEventArgs e)

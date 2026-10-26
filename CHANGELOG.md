@@ -2,6 +2,15 @@
 
 All notable changes to Jockey Studio are documented here. Releases are published to GitHub, and the updater dialog shows each release's notes fetched from GitHub.
 
+## 0.2.7 — 2026-10-26
+
+More reliable timestamp seeking, smoother volume changes, and dropdowns that stay visible.
+
+- **Clean timestamp seeking** — seeking flushes queued device audio and resets the resampler so notes from the previous playhead position are not heard after a jump. Playback stays paused when seeking from a paused state.
+- **Faster, smoother volume control** — reduced the WASAPI output buffer to 10 ms and ramped gain over 12 ms for responsive, click-free slider adjustments.
+- **Adaptive deck dropdowns** — Loop, Volume, and Output Device controls open above or below their trigger based on available space, staying within the deck scroll area instead of being clipped by the top bar or window edge.
+- **Reliable dropdown dismissal** — in-window dropdowns close when clicking elsewhere and the window safely handles clicks that originate on text.
+
 ## 0.2.6 — 2026-10-20
 
 Auto-Play sequencing, Auto-mix compatibility, and clearer toggle controls.

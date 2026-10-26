@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using JockeyStudio.Wpf.Controls;
@@ -162,6 +163,14 @@ public partial class MainWindow : Window
         PreviewMouseMove += Window_PreviewMouseMove;
         PreviewMouseUp += Window_PreviewMouseUp;
         PreviewKeyDown += Window_PreviewKeyDown;
+        ScrollHost.ScrollChanged += (_, _) => RefreshOpenTilePopupPositions();
+        LocationChanged += (_, _) => RefreshOpenTilePopupPositions();
+        SizeChanged += (_, _) => RefreshOpenTilePopupPositions();
+        StateChanged += (_, _) =>
+        {
+            if (WindowState == WindowState.Minimized) CloseAllTilePopups();
+            else RefreshOpenTilePopupPositions();
+        };
 
         // Tile popups are separate transparent top-level windows. When the app
         // loses activation (alt-tab, another app focused, minimize) they must
@@ -558,7 +567,7 @@ public partial class MainWindow : Window
         for (var cur = hit; cur != null;)
         {
             if (cur is TileCardControl { DeckValue: { } deck }) return deck;
-            cur = VisualTreeHelper.GetParent(cur) ?? LogicalTreeHelper.GetParent(cur);
+            cur = GetInputParent(cur);
         }
         return null;
     }
@@ -586,6 +595,12 @@ public partial class MainWindow : Window
             tile.CloseAllPopups();
     }
 
+    private void RefreshOpenTilePopupPositions()
+    {
+        foreach (var tile in FindVisualChildren<TileCardControl>(DeckPanel))
+            tile.RefreshOpenPopupPosition();
+    }
+
     private bool IsPointOverOpenPopup(System.Windows.Point screen)
     {
         foreach (var tile in FindVisualChildren<TileCardControl>(DeckPanel))
@@ -598,11 +613,22 @@ public partial class MainWindow : Window
     private static bool IsPopupToggleButton(DependencyObject? source)
     {
         for (var cur = source; cur != null;
-             cur = VisualTreeHelper.GetParent(cur) ?? LogicalTreeHelper.GetParent(cur))
+             cur = GetInputParent(cur))
         {
             if (cur is Button { Name: "VolBtn" or "DevBtn" or "LoopBtn" }) return true;
         }
         return false;
+    }
+
+    private static DependencyObject? GetInputParent(DependencyObject node)
+    {
+        if (node is Visual or Visual3D)
+            return VisualTreeHelper.GetParent(node);
+        if (node is ContentElement content)
+            return ContentOperations.GetParent(content)
+                ?? (content as FrameworkContentElement)?.Parent
+                ?? LogicalTreeHelper.GetParent(node);
+        return LogicalTreeHelper.GetParent(node);
     }
 
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent)

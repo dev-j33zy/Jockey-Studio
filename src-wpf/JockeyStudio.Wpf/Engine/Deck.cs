@@ -241,7 +241,8 @@ public sealed class Deck
         });
     }
 
-    private void FinishLoad(int gen, DeckPlayer? player, string? err, double from, bool stamp)
+    private void FinishLoad(
+        int gen, DeckPlayer? player, string? err, double from, bool stamp)
     {
         if (gen != _loadGen)
         {

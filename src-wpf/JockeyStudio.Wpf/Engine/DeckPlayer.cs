@@ -14,6 +14,7 @@ public sealed class DeckPlayer : IDisposable
     private LoopingProvider? _loop;
     private DeckAudioPipe? _pipe;
     private MediaFoundationResampler? _mfResampler;
+    private SwitchableWaveProvider? _outputSource;
     private WasapiOut? _out;
 
     public DeckAudioPipe? Pipe => _pipe;
@@ -53,22 +54,9 @@ public sealed class DeckPlayer : IDisposable
             _pipe.SetVolume(volume);
 
             WaveFormat mixFormat = device.AudioClient.MixFormat;
-
-            IWaveProvider driving;
-            try
-            {
-                _mfResampler = new MediaFoundationResampler(new SampleToWaveProvider(_pipe), mixFormat);
-                driving = _mfResampler;
-            }
-            catch (Exception)
-            {
-                _mfResampler?.Dispose();
-                _mfResampler = null;
-                driving = new SampleToWaveProvider(_pipe);
-            }
-
-            _out = new WasapiOut(device, AudioClientShareMode.Shared, false, 100);
-            _out.Init(driving);
+            _outputSource = new SwitchableWaveProvider(CreateDrivingProvider(_pipe, mixFormat));
+            _out = new WasapiOut(device, AudioClientShareMode.Shared, true, 10);
+            _out.Init(_outputSource);
             _out.Play();
             IsPlaying = true;
             return null;
@@ -125,14 +113,45 @@ public sealed class DeckPlayer : IDisposable
 
     public double DurationSecs => _reader?.TotalTime.TotalSeconds ?? 0;
 
-    /// <summary>Seek the active stream while keeping its output pipeline running.</summary>
+    /// <summary>Flush queued output and reset the resampler after moving the
+    /// reader, so no buffered samples from the old position can be rendered.</summary>
     public void SeekRuntime(double secs)
     {
-        if (_loop == null) throw new InvalidOperationException("playback stream is unavailable");
+        if (_loop == null || _pipe == null || _outputSource == null)
+            throw new InvalidOperationException("playback stream is unavailable");
+
+        bool resumePlayback = IsPlaying;
+        _out?.Stop();
+        IsPlaying = false;
         _loop.SeekRuntime(secs);
+
+        _mfResampler?.Dispose();
+        _mfResampler = null;
+        _outputSource.SetSource(CreateDrivingProvider(_pipe, _outputSource.WaveFormat));
+
+        if (resumePlayback)
+        {
+            _out?.Play();
+            IsPlaying = true;
+        }
     }
 
     public void Dispose() => Cleanup();
+
+    private IWaveProvider CreateDrivingProvider(DeckAudioPipe pipe, WaveFormat mixFormat)
+    {
+        try
+        {
+            _mfResampler = new MediaFoundationResampler(new SampleToWaveProvider(pipe), mixFormat);
+            return _mfResampler;
+        }
+        catch (Exception)
+        {
+            _mfResampler?.Dispose();
+            _mfResampler = null;
+            return new SampleToWaveProvider(pipe);
+        }
+    }
 
     private void Cleanup()
     {
@@ -144,9 +163,22 @@ public sealed class DeckPlayer : IDisposable
         catch { _out = null; }
         _mfResampler?.Dispose();
         _mfResampler = null;
+        _outputSource = null;
         _reader?.Dispose();
         _reader = null;
         _loop = null;
         _pipe = null;
+    }
+
+    private sealed class SwitchableWaveProvider(IWaveProvider source) : IWaveProvider
+    {
+        private IWaveProvider _source = source;
+
+        public WaveFormat WaveFormat { get; } = source.WaveFormat;
+
+        public void SetSource(IWaveProvider source) => Volatile.Write(ref _source, source);
+
+        public int Read(byte[] buffer, int offset, int count)
+            => Volatile.Read(ref _source).Read(buffer, offset, count);
     }
 }

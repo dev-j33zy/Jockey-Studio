@@ -73,7 +73,8 @@ public sealed class LoopingProvider : IWaveProvider
         }
     }
 
-    /// <summary>Seek the source without rebuilding the playback pipeline.</summary>
+    /// <summary>Move the reader and reset loop completion state. The output
+    /// player separately flushes device and resampler buffers around this call.</summary>
     public void SeekRuntime(double secs)
     {
         lock (_gate)

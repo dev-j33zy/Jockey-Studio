@@ -22,19 +22,32 @@ public static class ChangeLog
     /// "What's new" page. Kept separate from the versioned history because it
     /// describes the in-development behavior of this build, not a shipped
     /// release.</summary>
-    public const string LatestTitle = "Auto-Play sequencing with Auto-mix compatibility";
+    public const string LatestTitle = "Responsive seeking, smoother volume, and adaptive deck controls";
 
     /// <summary>Explanation of the current build's headline change (moved here
     /// from the About page).</summary>
     public const string LatestSummary =
-        "Enable Auto-Play globally and select decks to advance to the next enabled deck when a " +
-        "track finishes. Auto-Play decks are excluded from Auto-mix ducking and automatic " +
-        "pause/resume. The master and per-deck controls report their current state in tooltips.";
+        "Timestamp jumps now flush stale output and reset the resampler, volume changes ramp " +
+        "smoothly with lower latency, and Loop, Volume, and Output Device dropdowns flip above " +
+        "or below their controls to stay visible.";
 
     /// <summary>Versioned history, newest first. Sync source: CHANGELOG.md (the
     /// release notes published to GitHub and shown by the updater dialog).</summary>
     public static IReadOnlyList<ChangeLogEntry> Versions { get; } = new[]
     {
+        new ChangeLogEntry
+        {
+            Version = "0.2.7",
+            Title = "More reliable timestamp seeking, smoother volume changes, and dropdowns that stay visible",
+            Date = "2026-10-26",
+            Items = new[]
+            {
+                "Clean timestamp seeking — seeking flushes queued device audio and resets the resampler so notes from the previous playhead position are not heard after a jump. Playback stays paused when seeking from a paused state.",
+                "Faster, smoother volume control — reduced the WASAPI output buffer to 10 ms and ramped gain over 12 ms for responsive, click-free slider adjustments.",
+                "Adaptive deck dropdowns — Loop, Volume, and Output Device controls open above or below their trigger based on available space, staying within the deck scroll area instead of being clipped by the top bar or window edge.",
+                "Reliable dropdown dismissal — in-window dropdowns close when clicking elsewhere and the window safely handles clicks that originate on text.",
+            },
+        },
         new ChangeLogEntry
         {
             Version = "0.2.6",

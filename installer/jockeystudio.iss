@@ -5,7 +5,7 @@
 ;     --self-contained true -p:PublishSingleFile=true ^
 ;     -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true ^
 ;     -p:DebugType=None -p:DebugSymbols=false -o publish_out
-;   iscc /DAppVersion=0.2.6 installer\jockeystudio.iss
+;   iscc /DAppVersion=0.2.7 installer\jockeystudio.iss
 ;
 ; CI (.github/workflows/build.yml) runs both steps on a v* tag and attaches the
 ; resulting setup to the release; it is also the payload the in-app updater
@@ -16,7 +16,7 @@
 #define AppPublisher "dev-j33zy"
 
 #ifndef AppVersion
-  #define AppVersion "0.2.6"
+  #define AppVersion "0.2.7"
 #endif
 #ifndef PublishDir
   #define PublishDir "..\publish_out"

@@ -3,11 +3,13 @@ using NAudio.Wave;
 namespace JockeyStudio.Wpf.Engine;
 
 /// <summary>Float sample stage mirroring engine.rs DeckAudioPipe: exponential
-/// fade-in envelope, a volatile volume (set from the UI thread each heartbeat),
-/// mute (folds into volume), and an RMS meter used by automix. RMS accumulates
-/// on the audio thread into locals and commits under a tiny lock once per read.</summary>
+/// fade-in envelope, a volatile volume target (set from the UI thread), a short
+/// audio-thread volume ramp, mute (folds into volume), and an RMS meter used by
+/// automix. RMS accumulates locally and commits under a tiny lock once per read.</summary>
 public sealed class DeckAudioPipe : ISampleProvider
 {
+    private const double VolumeRampDurationMs = 12.0;
+
     private readonly ISampleProvider _source;
     private readonly Func<bool>? _wrapSignal;
     private readonly int _channels;
@@ -20,6 +22,13 @@ public sealed class DeckAudioPipe : ISampleProvider
     private double _fadeTime;
     private float _fadeGain;
     private bool _fadeActive;
+
+    private float _currentVolume = 1f;
+    private float _volumeRampStart = 1f;
+    private float _volumeRampTarget = 1f;
+    private int _volumeRampPosition;
+    private int _volumeRampFrames;
+    private bool _volumeInitialized;
 
     private double _sumSq;
     private long _count;
@@ -77,12 +86,36 @@ public sealed class DeckAudioPipe : ISampleProvider
 
         if (_wrapSignal?.Invoke() == true) ResetFade(_fadeInSecs);
 
-        float vol = _volume;
+        float volumeTarget = _volume;
+        if (!_volumeInitialized)
+        {
+            _currentVolume = volumeTarget;
+            _volumeRampTarget = volumeTarget;
+            _volumeInitialized = true;
+        }
+        else if (volumeTarget != _volumeRampTarget)
+        {
+            _volumeRampStart = _currentVolume;
+            _volumeRampTarget = volumeTarget;
+            _volumeRampPosition = 0;
+            _volumeRampFrames = Math.Max(1, (int)Math.Round(
+                _sampleRate * VolumeRampDurationMs / 1000.0));
+        }
+
         double sumSq = 0;
-        bool plain = !_fadeActive && Math.Abs(vol - 1f) < 0.0001f;
+        bool plain = !_fadeActive && _volumeRampPosition >= _volumeRampFrames
+            && Math.Abs(_currentVolume - 1f) < 0.0001f;
 
         for (int i = 0; i < read; )
         {
+            if (_volumeRampPosition < _volumeRampFrames)
+            {
+                _volumeRampPosition++;
+                float progress = (float)_volumeRampPosition / _volumeRampFrames;
+                _currentVolume = _volumeRampStart
+                    + (_volumeRampTarget - _volumeRampStart) * progress;
+            }
+
             float g = _fadeGain;
             if (_fadeActive)
             {
@@ -106,7 +139,7 @@ public sealed class DeckAudioPipe : ISampleProvider
             }
             else
             {
-                g *= vol;
+                g *= _currentVolume;
                 for (int c = 0; c < _channels && i < read; c++, i++)
                 {
                     float s = buffer[offset + i] * g;
